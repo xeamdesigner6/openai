@@ -508,7 +508,7 @@ function ScenarioForm() {
 
     try {
       const response = await fetch(
-        "https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287e26933445b37471fe76&user_name=testuser&bot_name=Kevin",
+        "https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287f19933445b37471fe79&user_name=testuser&bot_name=Kevin",
         requestOptions
       );
       const result = await response.json();
@@ -534,7 +534,6 @@ useEffect(()=>{
 
  
 
-
   return (
     <>
       <section className="bg-[#e6e6e6] h-full  mx-auto p-5 sm:p-10 md:px-6 py-5  ">
@@ -548,7 +547,7 @@ useEffect(()=>{
             
           </div>
 
-              {text}
+        
 
               <div className="flex flex-col items-center justify-center gap-5  md:flex-row py-3"><a
                 className="inline-block w-auto text-center  px-6 py-1 text-white transition-all rounded-md shadow-xl sm:w-auto bg-[#5c9bb6] hover:shadow-2xl hover:shadow-blue-400 hover:-tranneutral-y-px "
@@ -625,17 +624,17 @@ useEffect(()=>{
                   Clearly communicated the job requirements and expectations to the candidate.
                 </div>
               </div>
-              {text && (
+              {/* {text && (
                 <div>
                   <h2>Base64 Audio & Video</h2>
-                  {/* <textarea
+                  <textarea
                     readOnly
                     rows={10}
                     cols={50}
                     value={text}
-                  ></textarea> */}
+                  ></textarea>
                 </div>
-              )}
+              )} */}
             </div>
 
             <div className="max-w-2xl flex justify-center sm:col-span-6 lg:col-span-6">
@@ -644,14 +643,14 @@ useEffect(()=>{
 
                   {botChat ? (
                     <>
-                      <div className='flex'>
-                        <div className="w-auto bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
-                          {botChat.bot_response}
-                        </div>
+                      <div className='flex justify-start gap-1'>
                         <img
                           src={botChat.avatarUrl || "https://www.tailwind-kit.com/images/object/10.png"}
-                          className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
+                          className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 "
                         />
+                        <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
+                          {botChat.bot_response}
+                        </div>
                       </div>
 
                       <div className="mt-2 ">
@@ -705,7 +704,7 @@ useEffect(()=>{
                 </div>
                 {items.map((conversationItem, i) => {
                   return (
-                    <div className="mt-5" key={conversationItem.id}>
+                    <div className="" key={conversationItem.id}>
                       <div className={``}>
                         {/* tool response */}
                         {conversationItem.type === 'function_call_output' && (
@@ -732,10 +731,13 @@ useEffect(()=>{
 
 
 
-                      {!conversationItem.formatted.tool &&
-                          conversationItem.role === 'user' && (
-                            <div className="flex">
-                              <div className="w-auto bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
+                
+                            <div className="flex mb-4 justify-end gap-1 ">
+                            <img
+                                src={"https://www.tailwind-kit.com/images/object/10.png"}
+                                className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
+                              />
+                              <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
                                 {/* {conversationItem.formatted.transcript ||
                                   conversationItem.formatted.text ||
                                   '(truncated)'} */}
@@ -743,26 +745,23 @@ useEffect(()=>{
                                   {text}
 
                               </div>
+                            
+                            </div>
+                       
+
+                        {!conversationItem.formatted.tool &&
+                          conversationItem.role === 'assistant' && (
+                            <div className="flex mb-4 justify-start gap-1">
                               <img
                                 src={"https://www.tailwind-kit.com/images/object/10.png"}
                                 className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
                               />
-                            </div>
-                          )}
-
-                        {!conversationItem.formatted.tool &&
-                          conversationItem.role === 'assistant' && (
-                            <div className="flex">
-                              <div className="w-auto bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
+                              <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
                                 {conversationItem.formatted.transcript ||
                                   conversationItem.formatted.text ||
                                   '(truncated)'}
 
                               </div>
-                              <img
-                                src={"https://www.tailwind-kit.com/images/object/10.png"}
-                                className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
-                              />
                             </div>
                           )}
                       </div>
