@@ -14,6 +14,8 @@ import WavEncoder from 'wav-encoder'; // Import wav-encoder
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { Link } from 'react-router-dom';
 import DeleteModel from '../components/delete/DeleteModel';
+import { toast } from 'react-toastify';
+import { log } from 'console';
 
 const LOCAL_RELAY_SERVER_URL: string =
   process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
@@ -66,6 +68,16 @@ function ScenarioForm() {
   const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const startTimeRef = useRef<string>(new Date().toISOString());
+  const [timeData, setTimeData] = useState<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+  }>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+  const [time, setTime] = useState<string>('');
 
   const SpeechRecognition =
     (window as any).SpeechRecognition ||
@@ -170,21 +182,15 @@ function ScenarioForm() {
     setRealtimeEvents([]);
     setItems(client.conversation.getItems());
 
-    // await wavRecorder.begin();
-    // // Connect to audio output
-    // await wavStreamPlayer.connect();
-    // if (client.getTurnDetectionType() === 'server_vad') {
-    //   await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    // }
-
     try {
       // Connect to microphone
       await wavRecorder.begin();
+      if (wavRecorder.getStatus() === 'recording') {
+        await wavRecorder.pause();
+      }
       // Connect to audio output
       await wavStreamPlayer.connect();
-      if (client.getTurnDetectionType() === 'server_vad') {
-        await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-      }
+      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     } catch (error) {
       console.error('connectConversation error:', error);
       // Ensure proper cleanup on error
@@ -205,6 +211,7 @@ function ScenarioForm() {
   const startAudioVideoProcessing = async () => {
     try {
       const client = clientRef.current;
+      const wavRecorder = wavRecorderRef.current;
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         // video: true,
@@ -266,6 +273,7 @@ function ScenarioForm() {
         console.log('Client not connected. Establishing connection...');
         await client.connect();
       }
+      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
@@ -321,11 +329,14 @@ function ScenarioForm() {
   };
 
   const startRecording = async () => {
+    const wavRecorder = wavRecorderRef.current;
+    const client = clientRef.current;
     if (
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state !== 'recording'
     ) {
       // stopListening();
+
       mediaRecorderRef.current.start();
       setIsRecording(true);
       console.log('Recording started...: ', recognition);
@@ -336,6 +347,10 @@ function ScenarioForm() {
       // await recognition.stop();
       // startListening()
     }
+    if (wavRecorder.getStatus() === 'recording') {
+      await wavRecorder.pause();
+    }
+    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
   };
 
   const startListening = useCallback(async () => {
@@ -377,18 +392,15 @@ function ScenarioForm() {
     }
   }, [text]);
 
-  // console.log(text, "text--------")
-
-  const stopListening = () => {
+  const stopListening = async () => {
     // setIsListening(false);
-    recognition.stop();
+    await recognition.stop();
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     stopListening();
     const client = clientRef.current;
-    if (isListening) {
-    }
+    const wavRecorder = wavRecorderRef.current;
     if (
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state === 'recording'
@@ -403,34 +415,7 @@ function ScenarioForm() {
       const user_name = 'User'; // Replace with dynamic value
       const previous_msg = 'This is a sample scenario'; // Replace with dynamic value
 
-      const prompt = `
-      Your task is to reply to the user based on previous chats, current user response, and the scenario with the following details:
-      Title: ${title}, 
-      Category: ${category}, 
-      Difficulty: ${difficulty},
-      Description: ${description},
-      Mood: ${mood}.
-
-      previous messages:
-      ${previous_msg} // A function to fetch prior messages
-
-      current message:
-      Hello!
-
-      If the last message is out of scenario context and not part of the scenario, create a dialog telling the user to get back to the current scenario. Do not respond to out-of-context messages.
-      Name of the user is ${user_name}.
-
-      Keep the conversation natural like a real person is talking.
-      Return a single dialog.
-
-      dialog
-    `;
-      // client.sendUserMessageContent([
-      //   {
-      //     type: 'input_text',
-      //     text: prompt,
-      //   },
-      // ]);
+      await wavRecorder.pause();
       client.createResponse();
       console.log('Recording stopped...');
     } else {
@@ -478,16 +463,20 @@ function ScenarioForm() {
     };
 
     try {
+      // const response = await fetch(
+      //   'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287e26933445b37471fe76&user_name=testuser&bot_name=Kevin',
+      //   requestOptions
+      // );
       const response = await fetch(
-        'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287f19933445b37471fe79&user_name=testuser&bot_name=Kevin',
+        'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287cf2933445b37471fe72&user_name=testuser&bot_name=Kevin',
         requestOptions
       );
       const result = await response.json();
-
       if (result.bot_response) {
         setBotChat(result);
-      } else if (result.chats && result.chats.length > 0) {
+      } else if (result.time && result.chats.length > 0) {
         setChats((prevChats) => [...prevChats, ...result.chats]);
+        setTime(result.time);
       }
     } catch (error) {
       console.error('Error fetching chats:', error);
@@ -548,11 +537,66 @@ function ScenarioForm() {
       })
       .catch((error) => console.error(error));
   };
+
+  const addTimeChats = () => {
+    const { hours, minutes, seconds } = timeData;
+    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes
+      .toString()
+      .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const formdata = new FormData();
+    formdata.append('email', 'developer.wellorgs@gmail.com');
+    formdata.append('scenario_id', '67287c99933445b37471fe71');
+    formdata.append('time', formattedTime);
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      body: formdata,
+      redirect: 'follow',
+    };
+
+    fetch('https://socialiq.zapto.org/add_time', requestOptions)
+      .then((response) => response.json())
+      .then((result) => {
+        toast.success(result.message);
+        if (result) {
+          const formdata = new FormData();
+          formdata.append('email', 'developer.wellorgs@gmail.com');
+          formdata.append('scenario_id', '67287c99933445b37471fe71');
+          formdata.append('Title', 'Code Review Clash');
+          formdata.append('Category', 'Conflict Resolution');
+          formdata.append('Difficulty', 'Intermediate');
+          formdata.append(
+            'Description',
+            'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.'
+          );
+          formdata.append('Mood', 'Supportive');
+          formdata.append('user_name', 'hello');
+          formdata.append('bot_name', 'hello');
+
+          const requestOptions: RequestInit = {
+            method: 'POST',
+            body: formdata,
+            redirect: 'follow',
+          };
+
+          fetch('https://socialiq.zapto.org/scenario_analysis', requestOptions)
+            .then((response) => response.json())
+            .then((result) => {
+              console.log(result);
+              toast.success(result.message);
+            })
+            .catch((error) => console.error(error));
+        }
+      })
+
+      .catch((error) => console.error(error));
+  };
+
   return (
     <>
       <section className="bg-[#e6e6e6] h-full  mx-auto p-5 sm:p-10 md:px-6 py-5  ">
         <div className="container mx-auto">
-          <div className="flex  justify-between items-center mb-3  ">
+          <div className="flex  justify-between items-center mb-3">
             <p className="text-center text-[#1c4f78] ">
               <a href="/" title="home">
                 Dashboard &gt;{' '}
@@ -566,23 +610,27 @@ function ScenarioForm() {
             </p>
 
             <div className="flex items-center gap-5">
-              <div>Time : 00: 00 : 00</div>
+              <TimerComponent
+                onTimeUpdate={setTimeData}
+                botAndChat={time || botChat?.time}
+              />
             </div>
 
             <div className="flex flex-col items-center justify-center gap-5  md:flex-row py-3">
               <Link
                 className="inline-block w-auto text-center  px-6 py-1 text-white transition-all rounded-md shadow-xl sm:w-auto bg-[#5c9bb6] hover:shadow-2xl hover:shadow-blue-400 hover:-tranneutral-y-px "
                 to="#"
-                onClick={() => setIsOpen(true)}
+                onClick={addTimeChats}
               >
                 Exit
               </Link>
-              <a
+              <Link
                 className="inline-block w-auto text-center min-w-[200px] px-3 py-1 text-white transition-all bg-gray-700 dark:bg-[#ff5252] dark:text-white rounded-md shadow-xl sm:w-auto  hover:text-white shadow-neutral-300  hover:shadow-2xl hover:shadow-neutral-400 hover:-tranneutral-y-px"
-                href=""
+                to="#"
+                onClick={() => setIsOpen(true)}
               >
                 End The Session
-              </a>
+              </Link>
             </div>
             <DeleteModel
               open={isOpen}
@@ -655,12 +703,6 @@ function ScenarioForm() {
             {text && (
               <div>
                 <h2>Base64 Audio & Video</h2>
-                {/* <textarea
-                    readOnly
-                    rows={10}
-                    cols={50}
-                    value={text}
-                  ></textarea> */}
               </div>
             )}
           </div>
@@ -771,10 +813,21 @@ function ScenarioForm() {
                         />
                         <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
                           {/* {conversationItem.formatted.transcript ||
-                                  conversationItem.formatted.text ||
-                                  '(truncated)'} */}
+                            conversationItem.formatted.text ||
+                            '(truncated)'} */}
 
-                          {text}
+                          {/* {text} */}
+
+                          {!conversationItem.formatted.tool &&
+                            conversationItem.role === 'user' && (
+                              <div>
+                                {conversationItem.formatted.transcript ||
+                                  (conversationItem.formatted.audio?.length
+                                    ? '(awaiting transcript)'
+                                    : conversationItem.formatted.text ||
+                                      '(item sent)')}
+                              </div>
+                            )}
                         </div>
                       </div>
 
