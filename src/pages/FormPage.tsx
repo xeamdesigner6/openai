@@ -78,12 +78,11 @@ function ScenarioForm() {
     seconds: 0,
   });
   const [time, setTime] = useState<string>('');
-
+  const [timeUpdated, setTimeUpdated] = useState<boolean>(false);
 
   const [includeVideo, setIncludeVideo] = useState(false);
   const videoChunksRef = useRef([]);
   const mediaStreamRef = useRef(null);
-
 
   const SpeechRecognition =
     (window as any).SpeechRecognition ||
@@ -198,11 +197,9 @@ function ScenarioForm() {
       await wavStreamPlayer.connect();
 
       await wavRecorder.record((data) => {
-        client.appendInputAudio(data.mono)
-      })
-    
-    }
-       catch (error) {
+        client.appendInputAudio(data.mono);
+      });
+    } catch (error) {
       console.error('connectConversation error:', error);
       // Ensure proper cleanup on error
       setIsConnected(false);
@@ -258,7 +255,6 @@ function ScenarioForm() {
 
         console.log('Recording complete. Video Blob URL:', mediaUrl);
 
-
         // Convert to WAV
         const wavBlob = await convertToWav(mediaBlob);
         const wavBlobUrl = URL.createObjectURL(wavBlob);
@@ -280,9 +276,8 @@ function ScenarioForm() {
         await client.connect();
       }
       await wavRecorder.record((data) => {
-        client.appendInputAudio(data.mono)
+        client.appendInputAudio(data.mono);
       });
-      
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
@@ -360,7 +355,7 @@ function ScenarioForm() {
       await wavRecorder.pause();
     }
     await wavRecorder.record((data) => {
-      client.appendInputAudio(data.mono)
+      client.appendInputAudio(data.mono);
     });
   };
 
@@ -569,6 +564,7 @@ function ScenarioForm() {
       .then((response) => response.json())
       .then((result) => {
         toast.success(result.message);
+        setTimeUpdated(true);
         if (result) {
           const formdata = new FormData();
           formdata.append('email', 'developer.wellorgs@gmail.com');
@@ -593,8 +589,9 @@ function ScenarioForm() {
           fetch('https://socialiq.zapto.org/scenario_analysis', requestOptions)
             .then((response) => response.json())
             .then((result) => {
-              console.log(result);
-              toast.success(result.message);
+              setTimeout(() => {
+                toast.success(result.Message);
+              }, 5000);
             })
             .catch((error) => console.error(error));
         }
@@ -620,20 +617,17 @@ function ScenarioForm() {
               </a>
             </p>
 
-            {/* <div className="flex items-center gap-5">
-              <TimerComponent
-                onTimeUpdate={setTimeData}
-                botAndChat={time || botChat?.time}
-              />
-            </div> */}
-
             <div className="flex   lg:justify-between lg:items-center lg:justify-center gap-5  md:flex-row py-3">
-            <div className="flex items-center gap-5">
-              <TimerComponent
-                onTimeUpdate={setTimeData}
-                botAndChat={time || botChat?.time}
-              />
-            </div>
+              <div className="flex items-center gap-5">
+                {timeUpdated ? (
+                  <TimerComponent
+                    onTimeUpdate={setTimeData}
+                    botAndChat={time || botChat?.time}
+                  />
+                ) : (
+                  <TimerComponent onTimeUpdate={setTimeData} />
+                )}
+              </div>
               <Link
                 className="inline-block w-auto text-center  px-6 py-1 text-white transition-all rounded-md shadow-xl sm:w-auto bg-[#5c9bb6] hover:shadow-2xl hover:shadow-blue-400 hover:-tranneutral-y-px "
                 to="#"
@@ -667,7 +661,7 @@ function ScenarioForm() {
               />
               <div>
                 {/* Webcam feed display */}
-                <div style={{ position: 'relative' }} className='w-full h-full'>
+                <div style={{ position: 'relative' }} className="w-full h-full">
                   {/* <h2>Webcam Feed</h2> */}
                   <video
                     ref={videoRef}
@@ -816,7 +810,6 @@ function ScenarioForm() {
                          )} */}
 
                       <div className="flex mb-4 justify-end gap-1 ">
-                      
                         <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
                           {/* {conversationItem.formatted.transcript ||
                             conversationItem.formatted.text ||
