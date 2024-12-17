@@ -590,8 +590,7 @@ function ScenarioForm() {
             .then((response) => response.json())
             .then((result) => {
               setTimeout(() => {
-                console.log(result);
-                toast.success(result.message);
+                toast.success(result.Message);
               }, 5000);
             })
             .catch((error) => console.error(error));
