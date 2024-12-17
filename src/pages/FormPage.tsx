@@ -79,6 +79,12 @@ function ScenarioForm() {
   });
   const [time, setTime] = useState<string>('');
 
+
+  const [includeVideo, setIncludeVideo] = useState(false);
+  const videoChunksRef = useRef([]);
+  const mediaStreamRef = useRef(null);
+
+
   const SpeechRecognition =
     (window as any).SpeechRecognition ||
     (window as any).webkitSpeechRecognition;
@@ -190,8 +196,13 @@ function ScenarioForm() {
       }
       // Connect to audio output
       await wavStreamPlayer.connect();
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-    } catch (error) {
+
+      await wavRecorder.record((data) => {
+        client.appendInputAudio(data.mono)
+      })
+    
+    }
+       catch (error) {
       console.error('connectConversation error:', error);
       // Ensure proper cleanup on error
       setIsConnected(false);
@@ -214,7 +225,7 @@ function ScenarioForm() {
       const wavRecorder = wavRecorderRef.current;
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        // video: true,
+        video: true,
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -233,6 +244,7 @@ function ScenarioForm() {
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           mediaChunksRef.current.push(event.data);
+          // console.log(event.data,"121212")
         }
       };
 
@@ -244,14 +256,8 @@ function ScenarioForm() {
         const mediaUrl = URL.createObjectURL(mediaBlob);
         setMediaUrl(mediaUrl);
 
-        //     // Trigger download
-        //     const anchor = document.createElement('a');
-        //     anchor.href = mediaUrl;
-        // const abc=    anchor.download = 'audio.mp3';
-        // console.log(abc,"abc")
-        //     document.body.appendChild(anchor);
-        //     anchor.click();
-        //     document.body.removeChild(anchor);
+        console.log('Recording complete. Video Blob URL:', mediaUrl);
+
 
         // Convert to WAV
         const wavBlob = await convertToWav(mediaBlob);
@@ -273,7 +279,10 @@ function ScenarioForm() {
         console.log('Client not connected. Establishing connection...');
         await client.connect();
       }
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+      await wavRecorder.record((data) => {
+        client.appendInputAudio(data.mono)
+      });
+      
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
@@ -350,7 +359,9 @@ function ScenarioForm() {
     if (wavRecorder.getStatus() === 'recording') {
       await wavRecorder.pause();
     }
-    await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+    await wavRecorder.record((data) => {
+      client.appendInputAudio(data.mono)
+    });
   };
 
   const startListening = useCallback(async () => {
@@ -594,10 +605,10 @@ function ScenarioForm() {
 
   return (
     <>
-      <section className="bg-[#e6e6e6] h-full  mx-auto p-5 sm:p-10 md:px-6 py-5  ">
-        <div className="container mx-auto">
-          <div className="flex  justify-between items-center mb-3">
-            <p className="text-center text-[#1c4f78] ">
+      <section className="bg-[#e6e6e6]  mx-auto py-3 px-6   ">
+        <div className="">
+          <div className="flex  items-start lg:justify-between flex-col lg:flex-row  lg:items-center">
+            <p className="text-center text-[#1c4f78] text-sm ">
               <a href="/" title="home">
                 Dashboard &gt;{' '}
               </a>
@@ -609,14 +620,20 @@ function ScenarioForm() {
               </a>
             </p>
 
+            {/* <div className="flex items-center gap-5">
+              <TimerComponent
+                onTimeUpdate={setTimeData}
+                botAndChat={time || botChat?.time}
+              />
+            </div> */}
+
+            <div className="flex   lg:justify-between lg:items-center lg:justify-center gap-5  md:flex-row py-3">
             <div className="flex items-center gap-5">
               <TimerComponent
                 onTimeUpdate={setTimeData}
                 botAndChat={time || botChat?.time}
               />
             </div>
-
-            <div className="flex flex-col items-center justify-center gap-5  md:flex-row py-3">
               <Link
                 className="inline-block w-auto text-center  px-6 py-1 text-white transition-all rounded-md shadow-xl sm:w-auto bg-[#5c9bb6] hover:shadow-2xl hover:shadow-blue-400 hover:-tranneutral-y-px "
                 to="#"
@@ -625,7 +642,7 @@ function ScenarioForm() {
                 Exit
               </Link>
               <Link
-                className="inline-block w-auto text-center min-w-[200px] px-3 py-1 text-white transition-all bg-gray-700 dark:bg-[#ff5252] dark:text-white rounded-md shadow-xl sm:w-auto  hover:text-white shadow-neutral-300  hover:shadow-2xl hover:shadow-neutral-400 hover:-tranneutral-y-px"
+                className="inline-block w-auto text-center px-5 py-1 text-white transition-all bg-gray-700 bg-[#ff5252] dark:text-white rounded-md shadow-xl sm:w-auto  hover:text-white shadow-neutral-300  hover:shadow-2xl hover:shadow-neutral-400 hover:-tranneutral-y-px"
                 to="#"
                 onClick={() => setIsOpen(true)}
               >
@@ -639,8 +656,9 @@ function ScenarioForm() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
-          <div className="sm:col-span-6 lg:col-span-6   ">
+        {/* <div className="grid grid-cols-1 sm:grid-cols-12 gap-5"> */}
+        <div className="grid sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="sm:col-span-6  lg:col-span-7 xl:col-span-7  ">
             <div className="flex gap-5">
               <img
                 src={imagess}
@@ -649,7 +667,7 @@ function ScenarioForm() {
               />
               <div>
                 {/* Webcam feed display */}
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative' }} className='w-full h-full'>
                   {/* <h2>Webcam Feed</h2> */}
                   <video
                     ref={videoRef}
@@ -657,7 +675,7 @@ function ScenarioForm() {
                     muted
                     width="300"
                     height="400"
-                    className="border w-full h-80 shadow-md"
+                    className="border w-full h-full shadow-md object-cover"
                     style={{ borderRadius: '16px' }}
                   ></video>
 
@@ -692,8 +710,8 @@ function ScenarioForm() {
               </div>
             </div>
 
-            <div className="flex justify-end  mt-5">
-              <div className=" bg-[#e3f2fd] w-80  rounded-2xl p-5">
+            <div className="flex lg:justify-end  mt-5">
+              <div className=" bg-[#e3f2fd] lg:w-[360px]  rounded-2xl p-5">
                 <span>{getTips !== null && getTips.Tip}</span>
                 <span className="block">
                   {getTips !== null && getTips.emoji}
@@ -707,8 +725,8 @@ function ScenarioForm() {
             )}
           </div>
 
-          <div className="max-w-2xl flex justify-center sm:col-span-6 lg:col-span-6">
-            <div className="bg-white w-[900px] h-[86vh]  overflow-y-scroll   pb-10 border border-1 border-zinc-300 border-opacity-30 rounded-2xl relative overflow-hidden p-5">
+          <div className="max-w-2xl flex justify-center sm:col-span-6 lg:col-span-5 xl:col-span-5">
+            <div className="bg-white  h-[86vh] shadow-lg overflow-y-scroll   pb-10 border border-1 border-zinc-300 border-opacity-30 rounded-2xl relative overflow-hidden p-5">
               <div className="flex flex-col w-full gap-3">
                 {botChat ? (
                   <>
@@ -718,9 +736,9 @@ function ScenarioForm() {
                           botChat.avatarUrl ||
                           'https://www.tailwind-kit.com/images/object/10.png'
                         }
-                        className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 "
+                        className="h-10 w-10 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 "
                       />
-                      <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
+                      <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-lg flex items-center px-2 py-2 text-white relative">
                         {botChat.bot_response}
                       </div>
                     </div>
@@ -744,16 +762,9 @@ function ScenarioForm() {
                       >
                         {isTestUserMessage ? (
                           <>
-                            <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
+                            <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-lg flex items-center px-2 py-2 text-white relative text-sm">
                               {message}
                             </div>
-                            <img
-                              src={
-                                message.avatarUrl ||
-                                'https://www.tailwind-kit.com/images/object/10.png'
-                              }
-                              className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
-                            />
                           </>
                         ) : (
                           <>
@@ -762,10 +773,10 @@ function ScenarioForm() {
                                 message.avatarUrl ||
                                 'https://www.tailwind-kit.com/images/object/10.png'
                               }
-                              className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full mr-3 opacity-90"
+                              className="h-10 w-10 border border-[1px] border-zinc-300 border-opacity-50 rounded-full mr-3 opacity-90"
                               alt="User avatar"
                             />
-                            <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
+                            <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative text-sm">
                               {message}
                             </div>
                           </>
@@ -805,12 +816,7 @@ function ScenarioForm() {
                          )} */}
 
                       <div className="flex mb-4 justify-end gap-1 ">
-                        <img
-                          src={
-                            'https://www.tailwind-kit.com/images/object/10.png'
-                          }
-                          className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
-                        />
+                      
                         <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
                           {/* {conversationItem.formatted.transcript ||
                             conversationItem.formatted.text ||
@@ -840,7 +846,7 @@ function ScenarioForm() {
                               }
                               className="h-12 w-12 border border-[1px] border-zinc-300 border-opacity-50 rounded-full ml-3 opacity-90 pl-[1px]"
                             />
-                            <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-center px-2 py-2 text-white relative">
+                            <div className="w-1/2 bg-[#2196f3] border border-1 border-zinc-300 border-opacity-30 rounded-lg flex items-center px-2 py-2 text-white relative">
                               {conversationItem.formatted.transcript ||
                                 conversationItem.formatted.text ||
                                 '(truncated)'}
