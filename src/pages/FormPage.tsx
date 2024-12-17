@@ -589,8 +589,10 @@ function ScenarioForm() {
           fetch('https://socialiq.zapto.org/scenario_analysis', requestOptions)
             .then((response) => response.json())
             .then((result) => {
-              console.log(result);
-              toast.success(result.message);
+              setTimeout(() => {
+                console.log(result);
+                toast.success(result.message);
+              }, 5000);
             })
             .catch((error) => console.error(error));
         }
