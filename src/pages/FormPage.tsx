@@ -50,6 +50,7 @@ function ScenarioForm() {
   const [isCameraOn, setIsCameraOn] = useState(true); // State for camera
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]); // Store chunks of video and audio
+  const videoChunksRef = useRef<Blob[]>([]); // Store chunks of video and audio
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const silenceTimeoutRef = useRef<number | null>(null);
@@ -83,7 +84,6 @@ function ScenarioForm() {
   const [timeUpdated, setTimeUpdated] = useState<boolean>(false);
 
   const [includeVideo, setIncludeVideo] = useState(false);
-  const videoChunksRef = useRef([]);
   const mediaStreamRef = useRef(null);
 
   const SpeechRecognition =
@@ -112,7 +112,6 @@ function ScenarioForm() {
           }
     )
   );
-
   useEffect(() => {
     // Get refs
     const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -158,7 +157,7 @@ function ScenarioForm() {
         tracks.forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [isCameraOn]);
 
   /**
    * Connect to conversation:
@@ -216,81 +215,184 @@ function ScenarioForm() {
 
   const startAudioVideoProcessing = async () => {
     try {
-      const client = clientRef.current;
-      const wavRecorder = wavRecorderRef.current;
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const constraints: MediaStreamConstraints = {
         audio: true,
-        video: true,
-      });
+        video: isCameraOn ? { facingMode: 'user' } : false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      if (videoRef.current) {
+
+      if (isCameraOn && videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play(); // Ensure the video plays
       }
+      const mimeType = isCameraOn ? 'video/webm;codecs=vp8' : 'audio/webm';
+      const bitsPerSecond = isCameraOn ? 256000 : 64000; // Lower bitrate for mobile
+      const options = { mimeType, bitsPerSecond };
+
+      // Set up the audio context
       audioContextRef.current = new AudioContext({ sampleRate: 24000 });
       const source = audioContextRef.current.createMediaStreamSource(stream);
-
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048; // Configure the analyser
+      analyserRef.current.fftSize = 2048;
       const dataArray = new Uint8Array(analyserRef.current.fftSize);
-
       source.connect(analyserRef.current);
 
-      const mediaRecorder = new MediaRecorder(stream);
+      // Set up MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      videoChunksRef.current = [];
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          mediaChunksRef.current.push(event.data);
-          // console.log(event.data,"121212")
+          videoChunksRef.current.push(event.data);
         }
       };
-
+      console.log(mimeType, '===type of mime');
       mediaRecorder.onstop = async () => {
-        const mediaBlob = new Blob(mediaChunksRef.current, {
-          // type: 'video/webm',
-          type: 'audio/webm',
-        });
+        const mediaBlob = new Blob(videoChunksRef.current, { type: mimeType });
         const mediaUrl = URL.createObjectURL(mediaBlob);
         setMediaUrl(mediaUrl);
-
         console.log('Recording complete. Video Blob URL:', mediaUrl);
+        if (!isCameraOn) {
+          // Convert to WAV if needed
+          const wavBlob = await convertToWav(mediaBlob);
+          const wavBlobUrl = URL.createObjectURL(wavBlob);
+          setWavUrl(wavBlobUrl);
+          setWavBlobUrl(wavBlob);
 
-        // Convert to WAV
-        const wavBlob = await convertToWav(mediaBlob);
-        const wavBlobUrl = URL.createObjectURL(wavBlob);
-        setWavUrl(wavBlobUrl);
-        setWavBlobUrl(wavBlob);
+          // Cleanup the object URL after the download
+          URL.revokeObjectURL(wavBlobUrl);
 
-        // Create a temporary anchor element to trigger the download
-        // const anchor = document.createElement('a');
-        // anchor.href = wavBlobUrl;
-        // anchor.target = '_blank';
-        // anchor.download = 'audio_output.wav';
-        // anchor.click(); // Trigger the download
+          // Optional: You can use this for base64 conversion or any other processing
+          convertToBase64(mediaBlob);
+        }
 
-        // Cleanup the object URL after the download
-        URL.revokeObjectURL(wavBlobUrl);
-
-        convertToBase64(mediaBlob);
-        mediaChunksRef.current = [];
+        videoChunksRef.current = [];
       };
 
-      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsRecording(true);
+      console.log('Recording started...');
 
+      // Monitor audio levels
       monitorAudioLevels(dataArray, stream);
 
-      // Check connection status before connecting
-      if (client.isConnected()) {
+      // Client connection logic (Placeholder)
+      const client = clientRef.current;
+      if (client && client.isConnected()) {
         console.log('Client already connected. Skipping connect()..');
       } else {
         console.log('Client not connected. Establishing connection...');
         await client.connect();
       }
-      await wavRecorder.record((data) => {
-        client.appendInputAudio(data.mono);
-      });
+
+      const wavRecorder = wavRecorderRef.current;
+      if (wavRecorder) {
+        await wavRecorder.record((data: any) => {
+          if (client) {
+            client.appendInputAudio(data.mono);
+          }
+        });
+      }
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error('Error accessing microphone or camera:', error);
     }
   };
+
+  // const startAudioVideoProcessing = async () => {
+  //   try {
+  //     const client = clientRef.current;
+  //     const wavRecorder = wavRecorderRef.current;
+  //     const constraints: MediaStreamConstraints = {
+  //       audio: true,
+  //       video: includeVideo ? { facingMode: 'user' } : false,
+  //     };
+  //     // const stream = await navigator.mediaDevices.getUserMedia({
+  //     //   audio: true,
+  //     //   video: true,
+  //     // });
+  //     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  //     streamRef.current = stream;
+
+  //     const mimeType = includeVideo ? 'video/webm;codecs=vp8' : 'audio/webm';
+  //     const bitsPerSecond = includeVideo ? 256000 : 64000; // Lower bitrate for mobile
+  //     const options = { mimeType, bitsPerSecond };
+
+  //     // if (videoRef.current) {
+  //     //   videoRef.current.srcObject = stream;
+  //     // }
+  //     audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+  //     const source = audioContextRef.current.createMediaStreamSource(stream);
+
+  //     analyserRef.current = audioContextRef.current.createAnalyser();
+  //     analyserRef.current.fftSize = 2048; // Configure the analyser
+  //     const dataArray = new Uint8Array(analyserRef.current.fftSize);
+
+  //     source.connect(analyserRef.current);
+
+  //     const mediaRecorder = new MediaRecorder(stream, options);
+  //     mediaRecorderRef.current = mediaRecorder;
+  //     videoChunksRef.current = [];
+
+  // mediaRecorder.ondataavailable = (event) => {
+  //   if (event.data.size > 0) {
+  //     mediaChunksRef.current.push(event.data);
+  //     // console.log(event.data,"121212")
+  //   }
+  // };
+
+  //     mediaRecorder.onstop = async () => {
+  //       // const mediaBlob = new Blob(mediaChunksRef.current, {
+  //       //   // type: 'video/webm',
+  //       //   type: 'audio/webm',
+  //       // });
+  //       const mediaBlob = new Blob(videoChunksRef.current, { type: mimeType });
+
+  //       const mediaUrl = URL.createObjectURL(mediaBlob);
+  //       setMediaUrl(mediaUrl);
+
+  //       console.log('Recording complete. Video Blob URL:', mediaUrl);
+
+  //       // Convert to WAV
+  //       const wavBlob = await convertToWav(mediaBlob);
+  //       const wavBlobUrl = URL.createObjectURL(wavBlob);
+  //       setWavUrl(wavBlobUrl);
+  //       setWavBlobUrl(wavBlob);
+
+  //       // Create a temporary anchor element to trigger the download
+  //       // const anchor = document.createElement('a');
+  //       // anchor.href = wavBlobUrl;
+  //       // anchor.target = '_blank';
+  //       // anchor.download = 'audio_output.wav';
+  //       // anchor.click(); // Trigger the download
+
+  //       // Cleanup the object URL after the download
+  //       URL.revokeObjectURL(wavBlobUrl);
+
+  //       convertToBase64(mediaBlob);
+  //       mediaChunksRef.current = [];
+  //     };
+
+  //     mediaRecorderRef.current = mediaRecorder;
+
+  //     monitorAudioLevels(dataArray, stream);
+
+  //     // Check connection status before connecting
+  //     if (client.isConnected()) {
+  //       console.log('Client already connected. Skipping connect()..');
+  //     } else {
+  //       console.log('Client not connected. Establishing connection...');
+  //       await client.connect();
+  //     }
+  //     await wavRecorder.record((data) => {
+  //       client.appendInputAudio(data.mono);
+  //     });
+  //   } catch (error) {
+  //     console.error('Error accessing microphone:', error);
+  //   }
+  // };
 
   const convertToWav = async (audioBlob: Blob): Promise<Blob> => {
     const arrayBuffer = await audioBlob.arrayBuffer();
@@ -449,17 +551,54 @@ function ScenarioForm() {
       }
     }
   };
+  useEffect(() => {
+    console.log('Toggling camera...');
 
-  // Toggle the camera on/off
-  const toggleCamera = () => {
-    if (streamRef.current) {
-      const videoTrack = streamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsCameraOn(videoTrack.enabled);
-      }
+    if (!streamRef.current) {
+      console.error('streamRef.current is null or undefined.');
+      return;
     }
-  };
+
+    const videoTracks = streamRef.current.getVideoTracks();
+    if (videoTracks.length === 0) {
+      console.error('No video tracks found in the stream.');
+      return;
+    }
+
+    const videoTrack = videoTracks[0];
+    videoTrack.enabled = !videoTrack.enabled;
+    console.log(`Camera toggled: ${videoTrack.enabled}`);
+  }, [isCameraOn]);
+  // Toggle the camera on/off
+  // const toggleCamera = () => {
+  //   console.log('Toggling camera...');
+
+  //   if (!streamRef.current) {
+  //     console.error('streamRef.current is null or undefined.');
+  //     return;
+  //   }
+
+  //   const videoTracks = streamRef.current.getVideoTracks();
+  //   if (videoTracks.length === 0) {
+  //     console.error('No video tracks found in the stream.');
+  //     return;
+  //   }
+
+  //   const videoTrack = videoTracks[0];
+  //   videoTrack.enabled = !videoTrack.enabled;
+  //   console.log(`Camera toggled: ${videoTrack.enabled}`);
+
+  //   setIsCameraOn(!isCameraOn);
+  // };
+  // const toggleCamera = () => {
+  //   if (streamRef.current) {
+  //     const videoTrack = streamRef.current.getVideoTracks()[0];
+  //     if (videoTrack) {
+  //       videoTrack.enabled = !videoTrack.enabled;
+  //       setIsCameraOn(videoTrack.enabled);
+  //     }
+  //   }
+  // };
 
   // ---------------------
 
@@ -645,7 +784,7 @@ function ScenarioForm() {
     );
     formdata.append('Mood', 'Supportive');
     formdata.append('video', wavBlobUrl);
-    formdata.append('is_video', 'true');
+    formdata.append('is_video', wavBlobUrl ? 'true' : 'false');
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -760,7 +899,7 @@ function ScenarioForm() {
                     </div>
                     <div>
                       <button
-                        onClick={toggleCamera}
+                        onClick={() => setIsCameraOn(!isCameraOn)}
                         style={{ background: 'transparent', border: 'none' }}
                       >
                         {isCameraOn ? (
