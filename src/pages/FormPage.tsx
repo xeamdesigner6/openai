@@ -630,7 +630,6 @@ function ScenarioForm() {
         .then((response) => response.json())
         .then((result) => {
           console.log(result);
-          toast.success(result.message);
           setText('');
         })
         .catch((error) => console.error(error));
