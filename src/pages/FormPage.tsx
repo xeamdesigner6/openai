@@ -597,42 +597,81 @@ function ScenarioForm() {
     }
   };
 
+  const fetchStoreDetails = async () => {
+    const myHeaders = new Headers();
+    myHeaders.append('Content-Type', 'application/json');
+
+    const raw = JSON.stringify({
+      email: 'developer.wellorgs@gmail.com',
+      Title: 'Code Review Clash',
+      Category: 'Conflict Resolution',
+      Difficulty: 'Intermediate',
+      Description:
+        'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.',
+      Mood: 'Supportive',
+      scenario_id: '67287c99933445b37471fe71',
+      bot_name: 'hello',
+      user_name: 'abc',
+      start_message: 'Hello testuser',
+      last_message: 'Let’s make this',
+    });
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      headers: myHeaders,
+      body: raw,
+      redirect: 'follow',
+    };
+
+    fetch('https://socialiq.zapto.org/store_details', requestOptions)
+      .then((response) => response.json())
+      .then((result) => {
+        console.log(result.message);
+        toast.success(result.message);
+      })
+      .catch((error) => console.error(error));
+  };
+
+  const fetchGenerateDialogVideo = () => {
+    const file = new File([wavBlobUrl], wavUrl, {
+      type: wavBlobUrl?.type,
+    });
+    const formdata = new FormData();
+    formdata.append('email', 'developer.wellorgs@gmail.com');
+    formdata.append('scenario_id', '67287c99933445b37471fe71');
+    formdata.append('Title', 'Code Review Clash');
+    formdata.append('Category', 'Conflict Resolution');
+    formdata.append('Difficulty', 'Intermediate');
+    formdata.append(
+      'Description',
+      'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.'
+    );
+    formdata.append('Mood', 'Supportive');
+    formdata.append('video', file);
+    formdata.append('is_video', 'true');
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      body: formdata,
+      redirect: 'follow',
+    };
+
+    fetch('https://socialiq.zapto.org/generate_dialog_video', requestOptions)
+      .then((response) => response.json())
+      .then((result) => {
+        console.log(result);
+        setText('');
+      })
+      .catch((error) => console.error(error));
+  };
   useEffect(() => {
     if (isRecordingStop && wavBlobUrl && text) {
+      // get TIP   GET API
       fetchGetTips();
-      const file = new File([wavBlobUrl], wavUrl, {
-        type: wavBlobUrl?.type,
-      });
-
-      const formdata = new FormData();
-      formdata.append('email', 'developer.wellorgs@gmail.com');
-      formdata.append('scenario_id', '67287c99933445b37471fe71');
-      formdata.append('Title', 'Code Review Clash');
-      formdata.append('Category', 'Conflict Resolution');
-      formdata.append('Difficulty', 'Intermediate');
-      formdata.append(
-        'Description',
-        'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.'
-      );
-      formdata.append('Mood', 'Supportive');
-      formdata.append('start_message', text);
-
-      formdata.append('video', file);
-      formdata.append('is_video', 'true');
-
-      const requestOptions: RequestInit = {
-        method: 'POST',
-        body: formdata,
-        redirect: 'follow',
-      };
-
-      fetch('https://socialiq.zapto.org/generate_dialog_video', requestOptions)
-        .then((response) => response.json())
-        .then((result) => {
-          console.log(result);
-          setText('');
-        })
-        .catch((error) => console.error(error));
+      // send audio or video to gpt post api
+      fetchGenerateDialogVideo();
+      // store_details POST API
+      fetchStoreDetails();
     }
   }, [isRecordingStop, wavBlobUrl, text]);
   return (
