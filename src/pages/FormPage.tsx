@@ -43,6 +43,7 @@ interface RealtimeEvent {
 
 function ScenarioForm() {
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingStop, setIsRecordingStop] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [base64Media, setBase64Media] = useState<string | null>(null); // Base64 format for audio and video
   const [isMicOn, setIsMicOn] = useState(true); // State for microphone
@@ -60,6 +61,7 @@ function ScenarioForm() {
   const [text, setText] = useState<string>('');
   const [isListening, setIsListening] = useState<boolean>(false);
   const [wavUrl, setWavUrl] = useState<any | null>(null);
+  const [wavBlobUrl, setWavBlobUrl] = useState<any | null>(null);
   const [getTips, setgetTips] = useState<any | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -158,10 +160,6 @@ function ScenarioForm() {
     };
   }, []);
 
-  useEffect(() => {
-    console.log('@@@ IS RECORDING: ', isRecording);
-  }, [isRecording]);
-
   /**
    * Connect to conversation:
    * WavRecorder taks speech input, WavStreamPlayer output, client is API client
@@ -259,8 +257,19 @@ function ScenarioForm() {
         const wavBlob = await convertToWav(mediaBlob);
         const wavBlobUrl = URL.createObjectURL(wavBlob);
         setWavUrl(wavBlobUrl);
+        setWavBlobUrl(wavBlob);
 
-        convertToBase64(mediaBlob); // Convert to base64 for both audio and video
+        // Create a temporary anchor element to trigger the download
+        // const anchor = document.createElement('a');
+        // anchor.href = wavBlobUrl;
+        // anchor.target = '_blank';
+        // anchor.download = 'audio_output.wav';
+        // anchor.click(); // Trigger the download
+
+        // Cleanup the object URL after the download
+        URL.revokeObjectURL(wavBlobUrl);
+
+        convertToBase64(mediaBlob);
         mediaChunksRef.current = [];
       };
 
@@ -413,17 +422,9 @@ function ScenarioForm() {
     ) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      const title = 'Example Title'; // Replace with dynamic value
-      const category = 'Example Category'; // Replace with dynamic value
-      const difficulty = 'Medium'; // Replace with dynamic value
-      const description = 'This is a sample scenario.'; // Replace with dynamic value
-      const mood = 'Friendly'; // Replace with dynamic value
-      const user_name = 'User'; // Replace with dynamic value
-      const previous_msg = 'This is a sample scenario'; // Replace with dynamic value
-
+      setIsRecordingStop(true);
       await wavRecorder.pause();
       client.createResponse();
-      console.log('Recording stopped...');
     } else {
       console.warn('MediaRecorder is not recording.');
     }
@@ -496,30 +497,6 @@ function ScenarioForm() {
   useEffect(() => {
     console.log(text, 'texttext');
   }, [text]);
-
-  const fetchGetTips = async () => {
-    const requestOptions: RequestInit = {
-      method: 'GET',
-      redirect: 'follow',
-    };
-
-    try {
-      const response = await fetch(
-        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=hello`,
-        requestOptions
-      );
-      const result = await response.json();
-      if (result) {
-        setgetTips(result);
-      }
-    } catch (error) {
-      console.error('Error fetching chats:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchGetTips();
-  }, []);
 
   const DeleteChatStatus = () => {
     const formdata = new FormData();
@@ -600,6 +577,103 @@ function ScenarioForm() {
       .catch((error) => console.error(error));
   };
 
+  const fetchGetTips = async () => {
+    const requestOptions: RequestInit = {
+      method: 'GET',
+      redirect: 'follow',
+    };
+
+    try {
+      const response = await fetch(
+        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${text}`,
+        requestOptions
+      );
+      const result = await response.json();
+      if (result) {
+        setgetTips(result);
+      }
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+    }
+  };
+
+  const fetchStoreDetails = async () => {
+    const myHeaders = new Headers();
+    myHeaders.append('Content-Type', 'application/json');
+
+    const raw = JSON.stringify({
+      email: 'developer.wellorgs@gmail.com',
+      Title: 'Code Review Clash',
+      Category: 'Conflict Resolution',
+      Difficulty: 'Intermediate',
+      Description:
+        'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.',
+      Mood: 'Supportive',
+      scenario_id: '67287c99933445b37471fe71',
+      bot_name: 'hello',
+      user_name: 'abc',
+      start_message: 'Hello testuser',
+      last_message: 'Let’s make this',
+    });
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      headers: myHeaders,
+      body: raw,
+      redirect: 'follow',
+    };
+
+    fetch('https://socialiq.zapto.org/store_details', requestOptions)
+      .then((response) => response.json())
+      .then((result) => {
+        console.log(result.message);
+        toast.success(result.message);
+      })
+      .catch((error) => console.error(error));
+  };
+
+  const fetchGenerateDialogVideo = () => {
+    const file = new File([wavBlobUrl], wavUrl, {
+      type: wavBlobUrl?.type,
+    });
+    const formdata = new FormData();
+    formdata.append('email', 'developer.wellorgs@gmail.com');
+    formdata.append('scenario_id', '67287c99933445b37471fe71');
+    formdata.append('Title', 'Code Review Clash');
+    formdata.append('Category', 'Conflict Resolution');
+    formdata.append('Difficulty', 'Intermediate');
+    formdata.append(
+      'Description',
+      'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.'
+    );
+    formdata.append('Mood', 'Supportive');
+    formdata.append('video', file);
+    formdata.append('is_video', 'true');
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      body: formdata,
+      redirect: 'follow',
+    };
+
+    fetch('https://socialiq.zapto.org/generate_dialog_video', requestOptions)
+      .then((response) => response.json())
+      .then((result) => {
+        console.log(result);
+        setText('');
+      })
+      .catch((error) => console.error(error));
+  };
+  useEffect(() => {
+    if (isRecordingStop && wavBlobUrl && text) {
+      // get TIP   GET API
+      fetchGetTips();
+      // send audio or video to gpt post api
+      fetchGenerateDialogVideo();
+      // store_details POST API
+      fetchStoreDetails();
+    }
+  }, [isRecordingStop, wavBlobUrl, text]);
   return (
     <>
       <section className="bg-[#e6e6e6]  mx-auto py-3 px-6   ">
