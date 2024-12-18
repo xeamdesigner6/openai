@@ -633,9 +633,6 @@ function ScenarioForm() {
   };
 
   const fetchGenerateDialogVideo = () => {
-    const file = new File([wavBlobUrl], wavUrl, {
-      type: wavBlobUrl?.type,
-    });
     const formdata = new FormData();
     formdata.append('email', 'developer.wellorgs@gmail.com');
     formdata.append('scenario_id', '67287c99933445b37471fe71');
@@ -647,7 +644,7 @@ function ScenarioForm() {
       'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.'
     );
     formdata.append('Mood', 'Supportive');
-    formdata.append('video', file);
+    formdata.append('video', wavBlobUrl);
     formdata.append('is_video', 'true');
 
     const requestOptions: RequestInit = {
