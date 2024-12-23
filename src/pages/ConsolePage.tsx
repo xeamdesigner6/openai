@@ -182,10 +182,10 @@ export function ConsolePage() {
 
 
   // Build the dynamic instruction prompt
-  const title = "Example Title"; // Replace with dynamic value
+  const title = "Negotiating a Salary Increase"; // Replace with dynamic value
   const category = "Example Category"; // Replace with dynamic value
   const difficulty = "Medium"; // Replace with dynamic value
-  const description = "This is a sample scenario."; // Replace with dynamic value
+  const description = "A recent graduate, user, is negotiating first job offer with the HR manager, Dan, who made an initial offer below users expected salary range."; // Replace with dynamic value
   const mood = "Friendly"; // Replace with dynamic value
   const user_name = "User"; // Replace with dynamic value
   const previous_msg = "This is a sample scenario"
