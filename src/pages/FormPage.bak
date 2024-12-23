@@ -65,9 +65,6 @@ function ScenarioForm() {
   const [wavBlobUrl, setWavBlobUrl] = useState<any | null>(null);
   const [getTips, setgetTips] = useState<any | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
-  
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -300,15 +297,6 @@ function ScenarioForm() {
           // convertToBase64(mediaBlob);
 
 
-        } else {
-          console.log('Video recording complete. Processing video Blob...');
-          // You can trigger a video download here or send it to a server
-          const videoBlobUrl = URL.createObjectURL(mediaBlob);
-          // const wavVideo = await convertToWav(mediaBlob);
-          setVideoBlobUrl(videoBlobUrl);
-          setVideoBlob(mediaBlob);
-          // Cleanup the video Blob URL
-          URL.revokeObjectURL(videoBlobUrl);
         }
 
         videoChunksRef.current = [];
@@ -911,7 +899,6 @@ function ScenarioForm() {
   };
 
   const fetchGenerateDialogVideo = () => {
-    console.log("@@@ VIDEO BLOB: ", videoBlob);
     const formdata = new FormData();
     formdata.append('email', 'developer.wellorgs@gmail.com');
     formdata.append('scenario_id', '67287c99933445b37471fe71');
@@ -924,8 +911,7 @@ function ScenarioForm() {
     );
     formdata.append('Mood', 'Supportive');
     // formdata.append('video', wavBlobUrl);
-    formdata.append('video', !isCameraOn ? wavBlobUrl : videoBlob);
-        // formdata.append('video', isCameraOn ? mediaBlob : wavBlobUrl );
+        formdata.append('video', isCameraOn ? mediaBlob : wavBlobUrl );
     // formdata.append('is_video', wavBlobUrl ? 'true' : 'false');
     formdata.append('is_video', isCameraOn ? 'true' : 'false');
 
@@ -944,17 +930,16 @@ function ScenarioForm() {
       .catch((error) => console.error(error));
   };
   useEffect(() => {
-    if (isRecordingStop && text) {
-      if (wavBlobUrl ?? videoBlob) {
-        // get TIP   GET API
-        fetchGetTips();
-        // send audio or video to gpt post api
-        fetchGenerateDialogVideo();
-        // store_details POST API
-        fetchStoreDetails();
-      }
+    if (isRecordingStop && text ) {
+
+      // get TIP   GET API
+      fetchGetTips();
+      // send audio or video to gpt post api
+      fetchGenerateDialogVideo();
+      // store_details POST API
+      fetchStoreDetails();
     }
-  }, [isRecordingStop, wavBlobUrl, videoBlob, text]);
+  }, [isRecordingStop, wavBlobUrl, text]);
  
  
   return (
