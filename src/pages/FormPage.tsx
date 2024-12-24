@@ -15,7 +15,6 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { Link } from 'react-router-dom';
 import DeleteModel from '../components/delete/DeleteModel';
 import { toast } from 'react-toastify';
-import { log } from 'console';
 
 const LOCAL_RELAY_SERVER_URL: string =
   process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
@@ -211,13 +210,20 @@ function ScenarioForm() {
       // Start recording
       console.log('Starting recording...');
       await wavRecorder.record((data) => {
-        client.appendInputAudio(data.mono);
+        if (!client.isConnected()) {
+          console.error('Cannot append audio: RealtimeAPI is not connected.');
+          return;
+        }
+        if (data && data.mono) {
+          client.appendInputAudio(data.mono);
+        } else {
+          console.error('Invalid audio data received.');
+        }
       });
     } catch (error) {
-      console.error('connectConversation error:', error);
-
-      // Ensure proper cleanup on error
       setIsConnected(false);
+      console.error('connectConversation error:', error);
+      // Ensure proper cleanup on error
       try {
         if (wavRecorder.getStatus() !== 'ended') {
           console.log('Cleaning up recorder...');
@@ -555,7 +561,6 @@ function ScenarioForm() {
 
     const videoTrack = videoTracks[0];
     videoTrack.enabled = !videoTrack.enabled;
-    console.log(`Camera toggled: ${videoTrack.enabled}`);
   }, [isCameraOn]);
 
   const fetchChatApiSecondTime = async () => {
