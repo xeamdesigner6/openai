@@ -155,7 +155,9 @@ function ScenarioForm() {
   }, []);
 
   useEffect(() => {
-    startAudioVideoProcessing();
+    if (isMicOn && isCameraOn) {
+      startAudioVideoProcessing();
+    }
     return () => {
       // Clean up resources on unmount
       if (audioContextRef.current) {
@@ -342,17 +344,6 @@ function ScenarioForm() {
       } catch (error) {
         console.error('Error starting recording:', error);
       }
-      // if (wavRecorder) {
-      //   if (!wavRecorder.record()) {
-      //     // Replace `isStarted()` with the actual check for your recorder
-      //     await wavRecorder.begin(); // Begin the recording session
-      //   }
-      //   await wavRecorder.record((data: any) => {
-      //     if (client) {
-      //       client.appendInputAudio(data.mono);
-      //     }
-      //   });
-      // }
     } catch (error) {
       console.error('Error accessing microphone or camera:', error);
     }
@@ -611,6 +602,8 @@ function ScenarioForm() {
         if (result) {
           if (result.message == 'Added Delete status to the chat') {
             setIsOpen(false);
+            setIsCameraOn(false);
+            setIsMicOn(false);
           }
         }
       })
@@ -665,6 +658,8 @@ function ScenarioForm() {
               setTimeout(() => {
                 toast.success(result.Message);
               }, 5000);
+              setIsCameraOn(false);
+              setIsMicOn(false);
             })
             .catch((error) => console.error(error));
         }
@@ -885,8 +880,9 @@ function ScenarioForm() {
                 <span className="block">
                   {getTips !== null && getTips.emoji}
                 </span>
-                <div className='bg-yellow-500 text-white px-2 py-2'>
-                  {emotion?.audio_emotion && emotion?.video_emotion}
+                <div className="bg-yellow-500 text-white px-2 py-2">
+                  {emotion?.audio_emotion}
+                  {emotion?.video_emotion}
                 </div>
               </div>
             </div>
