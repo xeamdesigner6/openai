@@ -125,7 +125,7 @@ function ScenarioForm() {
     const client = clientRef.current;
 
     // Set transcription, otherwise we don't get user transcriptions back
-    client.updateSession({ input_audio_transcription: { model: 'whisper-1'} });
+    client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
     client.on('conversation.updated', async ({ item, delta }: any) => {
       const items = client.conversation.getItems();
@@ -140,17 +140,16 @@ function ScenarioForm() {
           24000
         );
         item.formatted.file = wavFile;
-      }       
+      }
+
       setItems(items);
     });
 
-    setItems(client.conversation.getItems()); 
+    setItems(client.conversation.getItems());
 
     return () => {
       // cleanup; resets to defaults
       client.reset();
-      console.log('resets to defaults');
-      
     };
   }, []);
 
@@ -425,7 +424,7 @@ function ScenarioForm() {
 
       setIsRecording(true);
       console.log('Recording started...: ', recognition);
-      // startListening();
+      startListening();
     } else {
       console.warn('MediaRecorder is already recording.');
       // startListening()
