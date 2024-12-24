@@ -155,15 +155,15 @@ function ScenarioForm() {
   }, []);
 
   useEffect(() => {
-    if (isMicOn && isCameraOn) {
+    if (isCameraOn) {
       startAudioVideoProcessing();
     }
     return () => {
       // Clean up resources on unmount
-      if (audioContextRef.current) {
+      if (audioContextRef.current && isCameraOn && isMicOn) {
         audioContextRef.current.close();
       }
-      if (streamRef.current) {
+      if (streamRef.current && isCameraOn && isMicOn) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
