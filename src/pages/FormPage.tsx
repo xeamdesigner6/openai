@@ -40,6 +40,18 @@ interface RealtimeEvent {
   event: { [key: string]: any };
 }
 
+type SpeechRecognition = typeof window.SpeechRecognition | typeof window.webkitSpeechRecognition;
+
+interface Window {
+  SpeechRecognition?: SpeechRecognition;
+  webkitSpeechRecognition?: SpeechRecognition;
+}
+
+let recognition: InstanceType<SpeechRecognition> | null = null;
+
+let isSpeechRecognitionActive = false;
+
+
 function ScenarioForm() {
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingStop, setIsRecordingStop] = useState(false);
@@ -67,6 +79,10 @@ function ScenarioForm() {
   const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
 
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [transcript, setTranscript] = useState<any []>([]); 
+  const [processedTranscript, setProcessedTranscript] = useState<
+  { id: string; title: string }[]
+>([]); // Processed array of objects
 
   const [isPlaying, setIsPlaying] = useState(false);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -91,14 +107,145 @@ function ScenarioForm() {
 
   let mediaBlob: Blob | null = null; // Declare globally if shared across functions
 
-  const SpeechRecognition =
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition;
+// console.log(transcript,"transcripttranscript")
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = 'en-US'; // Set the language
-  recognition.interimResults = false; // Only return final results
-  recognition.continuous = false; // Listen for a single phrase
+useEffect(() => {
+  if(transcript.length > 0){
+    const allText = transcript.map((item, index) => ({
+        id: `${index + 1}`,
+        title: item
+    }))
+    setProcessedTranscript(allText);
+  }
+}, [transcript])
+
+
+  useEffect(() => {
+    const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    console.error("Web Speech API is not supported in this browser.");
+    return;
+  }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onstart = () => {
+      isSpeechRecognitionActive = true;
+      setIsListening(true);
+      setTranscript([]); // Clear transcript when the mic starts listening
+      console.log("Speech recognition started.");
+    };
+
+    recognition.onresult = (event :any) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript.trim() !== '') {
+        setTranscript((prev) => {
+          const updatedTranscript = [...prev, finalTranscript.trim()];
+          return updatedTranscript;
+        });
+      }
+      
+      
+    };
+
+    recognition.onend = () => {
+      isSpeechRecognitionActive = false;
+      setIsListening(false);
+      console.log("Speech recognition ended.");
+    };
+
+    recognition.onerror = (event :any) => {
+      console.error("Speech recognition error:", event.error);
+    };
+
+    // Cleanup on unmount
+    return () => {
+      if (recognition) {
+        recognition.onstart = null;
+        recognition.onresult = null;
+        recognition.onend = null;
+        recognition.onerror = null;
+      }
+    };
+  }, []);
+
+  const startSpeechRecognition = () => {
+    if (recognition && !isSpeechRecognitionActive) {
+      console.log("Starting speech recognition...");
+      setTranscript([]); // Clear previous transcript
+      recognition.start();
+      startRecording()
+    } else {
+      console.warn("Speech recognition already active or not initialized.");
+    }
+  };
+
+
+  const startRecording = async () => {
+    const wavRecorder = wavRecorderRef.current;
+    const client = clientRef.current;
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== 'recording'
+    ) {
+      // stopListening();
+
+      if (mediaRecorderRef.current) {
+        if (mediaRecorderRef.current.state === 'inactive') {
+          mediaRecorderRef.current.start();
+          setIsRecording(true);
+        } else {
+          console.warn('MediaRecorder is already recording.');
+        }
+      }
+
+      setIsRecording(true);
+      console.log('Recording started...: ', recognition);
+      // startListening();
+    } else {
+      console.warn('MediaRecorder is already recording.');
+      // startListening()
+    }
+    try {
+        await wavRecorder.begin();
+      await wavRecorder.record((data) => {
+        client.appendInputAudio(data.mono);
+      });
+    } catch (error) {
+      console.error('Error during recording setup:', error);
+    }
+  };
+
+  const stopSpeechRecognition = () => {
+    if (recognition && isSpeechRecognitionActive) {
+      console.log("Stopping speech recognition...");
+      recognition.stop();
+      stopRecording()
+    } else {
+      console.warn("Speech recognition not active.");
+    }
+  };
+
+
+
+  // const SpeechRecognition =
+  //   (window as any).SpeechRecognition ||
+  //   (window as any).webkitSpeechRecognition;
+
+  // const recognition = new SpeechRecognition();
+  // recognition.lang = 'en-US'; // Set the language
+  // recognition.interimResults = false; // Only return final results
+  // recognition.continuous = false; // Listen for a single phrase
 
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -212,7 +359,6 @@ function ScenarioForm() {
       console.log('Starting recording...');
       await wavRecorder.record((data) => {
         if (!client.isConnected()) {
-          console.error('Cannot append audio: RealtimeAPI is not connected.');
           return;
         }
         if (data && data.mono) {
@@ -314,14 +460,47 @@ function ScenarioForm() {
       };
 
       mediaRecorder.start();
-      setIsRecording(true);
       console.log('Recording started...');
+      startSpeechRecognition()
 
       // Monitor audio levels
-      monitorAudioLevels(dataArray, stream);
+      // monitorAudioLevels(dataArray, stream);
 
       // Client connection logic (Placeholder)
       const client = clientRef.current;
+      
+      // Build the dynamic instruction prompt
+      const title = 'Negotiating a Salary Increase'; // Replace with dynamic value
+      const category = 'Example Category'; // Replace with dynamic value
+      const difficulty = 'Medium'; // Replace with dynamic value
+      const description =
+        'A recent graduate, user, is negotiating first job offer with the HR manager, Dan, who made an initial offer below users expected salary range.'; // Replace with dynamic value
+      const mood = 'Friendly'; // Replace with dynamic value
+      const user_name = 'User'; // Replace with dynamic value
+      const previous_msg = 'This is a sample scenario';
+
+      const prompt = `
+    Your task is to reply to the user based on previous chats, current user response, and the scenario with the following details:
+    Title: ${title}, 
+    Category: ${category}, 
+    Difficulty: ${difficulty},
+    Description: ${description},
+    Mood: ${mood}.
+
+    previous messages:
+    ${previous_msg} // A function to fetch prior messages
+
+    current message:
+    Hello!
+
+    If the last message is out of scenario context and not part of the scenario, create a dialog telling the user to get back to the current scenario. Do not respond to out-of-context messages.
+    Name of the user is ${user_name}.
+
+    Keep the conversation natural like a real person is talking.
+    Return a single dialog.
+
+    dialog
+  `;
       try {
         if (!client.isConnected()) {
           console.log('Attempting to connect RealtimeClient...');
@@ -333,6 +512,15 @@ function ScenarioForm() {
       } catch (error) {
         console.error('Error connecting RealtimeClient:', error);
       }
+
+      
+      client.sendUserMessageContent([
+        {
+          type: `input_text`,
+          text: prompt,
+        },
+      ]);
+      client.createResponse();
 
       const wavRecorder = wavRecorderRef.current;
       if (wavRecorder.getStatus() === 'recording') {
@@ -389,14 +577,14 @@ function ScenarioForm() {
 
       const threshold = 20; // Audio sensitivity threshold
       if (rms > threshold) {
-        if (!isRecording) {
-          startRecording();
-        }
+          // startRecording();
+          // startSpeechRecognition()
 
         if (silenceTimeoutRef.current) {
           clearTimeout(silenceTimeoutRef.current);
         }
-        silenceTimeoutRef.current = window.setTimeout(stopRecording, 2000); // Stop after 2 seconds of silence
+        // silenceTimeoutRef.current = window.setTimeout(stopRecording, 2000); // Stop after 2 seconds of silence
+        silenceTimeoutRef.current = window.setTimeout(stopSpeechRecognition, 2000); // Stop after 2 seconds of silence
       }
 
       requestAnimationFrame(detectSpeech);
@@ -405,44 +593,7 @@ function ScenarioForm() {
     detectSpeech();
   };
 
-  const startRecording = async () => {
-    const wavRecorder = wavRecorderRef.current;
-    const client = clientRef.current;
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== 'recording'
-    ) {
-      // stopListening();
 
-      if (mediaRecorderRef.current) {
-        if (mediaRecorderRef.current.state === 'inactive') {
-          mediaRecorderRef.current.start();
-          setIsRecording(true);
-        } else {
-          console.warn('MediaRecorder is already recording.');
-        }
-      }
-
-      setIsRecording(true);
-      console.log('Recording started...: ', recognition);
-      // startListening();
-    } else {
-      console.warn('MediaRecorder is already recording.');
-      // startListening()
-    }
-    try {
-      if (wavRecorder.getStatus() === 'recording') {
-        await wavRecorder.pause();
-      } else if (wavRecorder.getStatus() === 'ended') {
-        await wavRecorder.begin();
-      }
-      await wavRecorder.record((data) => {
-        client.appendInputAudio(data.mono);
-      });
-    } catch (error) {
-      console.error('Error during recording setup:', error);
-    }
-  };
 
   const startListening = useCallback(async () => {
     try {
@@ -482,7 +633,6 @@ function ScenarioForm() {
   };
 
   const stopRecording = async () => {
-    stopListening();
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     if (
@@ -493,45 +643,6 @@ function ScenarioForm() {
       setIsRecording(false);
       setIsRecordingStop(true);
       await wavRecorder.pause();
-      // Build the dynamic instruction prompt
-      const title = 'Negotiating a Salary Increase'; // Replace with dynamic value
-      const category = 'Example Category'; // Replace with dynamic value
-      const difficulty = 'Medium'; // Replace with dynamic value
-      const description =
-        'A recent graduate, user, is negotiating first job offer with the HR manager, Dan, who made an initial offer below users expected salary range.'; // Replace with dynamic value
-      const mood = 'Friendly'; // Replace with dynamic value
-      const user_name = 'User'; // Replace with dynamic value
-      const previous_msg = 'This is a sample scenario';
-
-      const prompt = `
-    Your task is to reply to the user based on previous chats, current user response, and the scenario with the following details:
-    Title: ${title}, 
-    Category: ${category}, 
-    Difficulty: ${difficulty},
-    Description: ${description},
-    Mood: ${mood}.
-
-    previous messages:
-    ${previous_msg} // A function to fetch prior messages
-
-    current message:
-    Hello!
-
-    If the last message is out of scenario context and not part of the scenario, create a dialog telling the user to get back to the current scenario. Do not respond to out-of-context messages.
-    Name of the user is ${user_name}.
-
-    Keep the conversation natural like a real person is talking.
-    Return a single dialog.
-
-    dialog
-  `;
-      client.sendUserMessageContent([
-        {
-          type: `input_text`,
-          text: prompt,
-        },
-      ]);
-      client.createResponse();
     } else {
       console.warn('MediaRecorder is not recording.');
     }
@@ -918,7 +1029,8 @@ function ScenarioForm() {
                     </div>
 
                     <div className="mt-2 ">
-                      <audio autoPlay>
+                      {/* <audio autoPlay> */}
+                      <audio muted>
                         <source src={botChat?.audio_url} type="audio/mp3" />
                         Your browser does not support the audio element.
                       </audio>
@@ -962,16 +1074,33 @@ function ScenarioForm() {
                   <div>Loading chats.............</div> // In case there's no response or chat
                 )}
               </div>
+
+              {/* {transcript} */}
+              {processedTranscript.map((trans, i) => {
+                return (
+                  <div className="" key={i}>
+                    <div className={``}>
+                    <div className="flex mb-4 justify-end gap-1 ">
+                        <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">{trans?.title}</div>
+                      </div>
+                      </div>
+                      </div>
+                )
+              })}
+                      
+              
+
               {items.map((conversationItem, i) => {
                 return (
                   <div className="" key={conversationItem.id}>
                     <div className={``}>
-                      {!conversationItem.formatted.tool &&
+                      {/* {!conversationItem.formatted.tool &&
                         conversationItem.role === 'user' && (
                           <div>
                             {conversationItem.formatted.transcript ?? '--'}
                           </div>
-                        )}
+                        )} */}
+
 
                       <div className="flex mb-4 justify-end gap-1 ">
                         <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative"></div>

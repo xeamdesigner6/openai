@@ -4,6 +4,7 @@ import { ConsolePage } from './pages/ConsolePage';
 import ScenarioForm from './pages/FormPage';
 import './App.scss';
 import { ConsolePageNew } from './pages/ConsolePageNew';
+import Script from './pages/Script';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/" element={<ConsolePage />} />
           <Route path="/form" element={<ScenarioForm />} />
           <Route path="/console" element={<ConsolePageNew />} />
+          <Route path="/script" element={<Script />} />
         </Routes>
       </Router>
     </div>
