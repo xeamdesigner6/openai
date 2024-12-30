@@ -130,31 +130,34 @@ function ScenarioForm() {
    */
    const connectConversation = useCallback(async () => {
     const client = clientRef.current;
-  
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
-  
-    // Set state variables
-    startTimeRef.current = new Date().toISOString();
-    if (wavRecorder.getStatus() === 'recording') {
-      setIsConnected(false);
-      setRealtimeEvents([]);
-      setItems(client.conversation.getItems());
-    }
-  
-    try {
+
+     // Set state variables
+     startTimeRef.current = new Date().toISOString();
+     if (wavRecorder.getStatus() === 'recording') {
+       setIsConnected(false);
+       setRealtimeEvents([]);
+       setItems(client.conversation.getItems());
+     }
+    
+     
+
+     try {
+
       // Check if the recorder is already recording
       if (wavRecorder.getStatus() === 'recording') {
         console.log('Recorder is already recording. Pausing first...');
         await wavRecorder.pause(); // Pause if already recording
       }
-  
+
+
       // Begin recording if not started already
       await wavRecorder.begin();
-  
+
       // Connect to audio output
       await wavStreamPlayer.connect();
-  
+
       // Start recording
       console.log('Starting recording...');
       await wavRecorder.record((data) => 
@@ -176,77 +179,72 @@ function ScenarioForm() {
       setIsConnected(false); // Update state to reflect failure
       return; // Exit early due to error
     }
-  
-    // Build the dynamic instruction prompt
-    const title = 'Negotiating a Salary Increase'; // Replace with dynamic value
-    const category = 'Example Category'; // Replace with dynamic value
-    const difficulty = 'Medium'; // Replace with dynamic value
-    const description =
-      'A recent graduate, user, is negotiating first job offer with the HR manager, Dan, who made an initial offer below users expected salary range.'; // Replace with dynamic value
-    const mood = 'Friendly'; // Replace with dynamic value
-    const user_name = 'User'; // Replace with dynamic value
-    const previous_msg = 'This is a sample scenario';
-  
-    const prompt = `
+
+
+      // Build the dynamic instruction prompt
+      const title = 'Negotiating a Salary Increase'; // Replace with dynamic value
+      const category = 'Example Category'; // Replace with dynamic value
+      const difficulty = 'Medium'; // Replace with dynamic value
+      const description =
+        'A recent graduate, user, is negotiating first job offer with the HR manager, Dan, who made an initial offer below users expected salary range.'; // Replace with dynamic value
+      const mood = 'Friendly'; // Replace with dynamic value
+      const user_name = 'User'; // Replace with dynamic value
+      const previous_msg = 'This is a sample scenario';
+
+      const prompt = `
     Your task is to reply to the user based on previous chats, current user response, and the scenario with the following details:
     Title: ${title}, 
     Category: ${category}, 
     Difficulty: ${difficulty},
     Description: ${description},
     Mood: ${mood}.
-  
+
     previous messages:
     ${previous_msg} // A function to fetch prior messages
-  
+
     current message:
     Hello!
-  
+
     If the last message is out of scenario context and not part of the scenario, create a dialog telling the user to get back to the current scenario. Do not respond to out-of-context messages.
     Name of the user is ${user_name}.
-  
+
     Keep the conversation natural like a real person is talking.
     Return a single dialog.
-  
+
     dialog
-    `;
-  
-    try {
-      // Client connection logic (Placeholder)
-      if (!client.isConnected()) {
-        console.log('Attempting to connect RealtimeClient...');
-        await client.connect();
-        console.log('RealtimeClient connected successfully.');
-      } else {
-        console.log('RealtimeClient already connected.');
+  `;
+
+        // Client connection logic (Placeholder)
+
+      try {
+        if (!client.isConnected()) {
+          console.log('Attempting to connect RealtimeClient...');
+          await client.connect();
+          console.log('RealtimeClient connected successfully.');
+        } else {
+          console.log('RealtimeClient already connected.');
+        }
+      } catch (error) {
+        console.error('Error connecting RealtimeClient:', error);
       }
-    } catch (error) {
-      console.error('Error connecting RealtimeClient:', error);
-    }
-  
-    try {
+      
       client.sendUserMessageContent([
         {
           type: `input_text`,
           text: prompt,
         },
       ]);
-    } catch (error) {
-      console.error('Error sending user message content:', error);
-    }
-  
+
+
   }, []);
-  
 
  
   // Call the function when the component loads
   useEffect(() => {
-    try {
-        connectConversation();
-    } catch (error) {
-      console.error('Error connecting to conversation:', error);
-    }
-  }, [isMicOn]);
-  
+    connectConversation();
+    // if(!isConnected){
+    // }
+  }, [ ]);
 
 
 
@@ -254,108 +252,88 @@ function ScenarioForm() {
 
 
 
-  const startAudioVideoProcessing =  useCallback(async() => {
+  const startAudioVideoProcessing = async() => {
     const client = clientRef.current;
-  
+
     try {
       const constraints: MediaStreamConstraints = {
-        audio: isMicOn ,
+        audio: true,
         video: isCameraOn ? { facingMode: 'user' } : false,
       };
-  
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-  
-      try {
-        if (videoRef.current) {
-          videoRef.current.pause(); // Pause before updating srcObject
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play(); // Restart playback
-        }
-      } catch (error) {
-        console.error('Error updating video element:', error);
+
+      if (videoRef.current) {
+        videoRef.current.pause(); // Pause before updating srcObject
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play(); // Restart playback
       }
-  
+
       const mimeType = isCameraOn ? 'video/webm;codecs=vp8' : 'audio/webm';
       const bitsPerSecond = isCameraOn ? 256000 : 64000; // Lower bitrate for mobile
       const options = { mimeType, bitsPerSecond };
-  
+
       // Set up the audio context
-      try {
-        audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 2048;
-        const dataArray = new Uint8Array(analyserRef.current.fftSize);
-        source.connect(analyserRef.current);
-  
-        // Monitor audio levels
-        monitorAudioLevels(dataArray, stream);
-        if(isMicOn){
-        }
-        else{
-          return;
-        }
-      } catch (error) {
-        console.error('Error setting up audio context or analyser:', error);
-      }
-  
+      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 2048;
+      const dataArray = new Uint8Array(analyserRef.current.fftSize);
+      source.connect(analyserRef.current);
+
       // Set up MediaRecorder
-      try {
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      videoChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          videoChunksRef.current.push(event.data);
+        }
+      };
+      mediaRecorder.onstop = async () => {
+        const mediaBlob = new Blob(videoChunksRef.current, { type: mimeType });
+
+        const mediaUrl = URL.createObjectURL(mediaBlob);
+        setMediaUrl(mediaUrl);
+
+        if (!isCameraOn) {
+          // Convert to WAV if needed
+          console.log('Audio recording complete. Processing Audio Blob...');
+
+          const wavBlob = await convertToWav(mediaBlob);
+          const wavBlobUrl = URL.createObjectURL(wavBlob);
+
+          setWavUrl(wavBlobUrl);
+          setWavBlobUrl(wavBlob);
+
+          // Cleanup the object URL after the download
+          URL.revokeObjectURL(wavBlobUrl);
+        } else {
+          console.log('Video recording complete. Processing video Blob...');
+          // You can trigger a video download here or send it to a server
+          const videoBlobUrl = URL.createObjectURL(mediaBlob);
+          // const wavVideo = await convertToWav(mediaBlob);
+          setVideoBlobUrl(videoBlobUrl);
+          setVideoBlob(mediaBlob);
+          // Cleanup the video Blob URL
+          URL.revokeObjectURL(videoBlobUrl);
+        }
+
         videoChunksRef.current = [];
-  
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            videoChunksRef.current.push(event.data);
-          }
-        };
-        mediaRecorder.onstop = async () => {
-          const mediaBlob = new Blob(videoChunksRef.current, { type: mimeType });
-  
-          const mediaUrl = URL.createObjectURL(mediaBlob);
-          setMediaUrl(mediaUrl);
-  
-          if (!isCameraOn) {
-            // Convert to WAV if needed
-            try {
-              console.log('Audio recording complete. Processing Audio Blob...');
-              const wavBlob = await convertToWav(mediaBlob);
-              const wavBlobUrl = URL.createObjectURL(wavBlob);
-  
-              setWavUrl(wavBlobUrl);
-              setWavBlobUrl(wavBlob);
-  
-              // Cleanup the object URL after the download
-              URL.revokeObjectURL(wavBlobUrl);
-            } catch (error) {
-              console.error('Error processing audio Blob:', error);
-            }
-          } else {
-            console.log('Video recording complete. Processing video Blob...');
-            // You can trigger a video download here or send it to a server
-            const videoBlobUrl = URL.createObjectURL(mediaBlob);
-            setVideoBlobUrl(videoBlobUrl);
-            setVideoBlob(mediaBlob);
+      };
 
-            // Cleanup the video Blob URL
-            URL.revokeObjectURL(videoBlobUrl);
-          }
+      mediaRecorder.start();
+      console.log('Recording started...');
+      // startSpeechRecognition()
 
-  
-          videoChunksRef.current = [];
-        };
-  
-        mediaRecorder.start();
-        console.log('Recording started...');
-        // startSpeechRecognition()
-  
-      } catch (error) {
-        console.error('Error setting up MediaRecorder:', error);
-      }
-  
-      // Handle WAV recording
+      // Monitor audio levels
+      monitorAudioLevels(dataArray, stream);
+
+    
+      // client.createResponse();
+
       const wavRecorder = wavRecorderRef.current;
       if (wavRecorder.getStatus() === 'recording') {
         console.warn(
@@ -363,126 +341,86 @@ function ScenarioForm() {
         );
         return; // Prevent multiple recordings
       }
-  
-      // try {
-      //   await wavRecorder.record((data) => {
-      //     client.appendInputAudio(data.mono);
-      //   });
-      //   setIsRecording(true);
-      //   console.log('Recording started...');
-      // } catch (error) {
-      //   console.error('Error starting WAV recording:', error);
-      // }
+
+      try {
+        await wavRecorder.record((data) => {
+          client.appendInputAudio(data.mono);
+        });
+        setIsRecording(true);
+        console.log('Recording started...');
+      } catch (error) {
+        console.error('Error starting recording:', error);
+      }
     } catch (error) {
       console.error('Error accessing microphone or camera:', error);
     }
-  },[isMicOn, isCameraOn]);
-  
+  };
 
-
-
-          
-              // useEffect(() => {
-              //   if (isRecordingStop && text) {
-              //     if (wavBlobUrl ?? videoBlob ) {
-              //       // get TIP   GET API
-              //       fetchGetTips();
-              //       // send audio or video to gpt post api
-              //       fetchGenerateDialogVideo();
-              //       // store_details POST API
-              //       fetchStoreDetails();
-              //     }
-              //   }
-              // }, [isRecordingStop, wavBlobUrl, videoBlob, text, isCameraOn]);
-
-  
   useEffect(() => {
     console.log('isCameraOn: ', isCameraOn);
-  
-    try {
-      // Start audio/video processing
-      if (isCameraOn) {
-        startAudioVideoProcessing();
-      }
-    } catch (error) {
-      console.error('Error starting audio/video processing:', error);
-    }
-  
+    
+    // if (isCameraOn) {
+      startAudioVideoProcessing();
+    // }
     return () => {
       // Clean up resources on unmount
-      try {
-        if (audioContextRef.current && isCameraOn && isMicOn) {
-          audioContextRef.current.close();
-        }
-        if (streamRef.current && isCameraOn && isMicOn) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-        }
-      } catch (error) {
-        console.error('Error during cleanup:', error);
+      if (audioContextRef.current && isCameraOn && isMicOn) {
+        audioContextRef.current.close();
+      }
+      if (streamRef.current && isCameraOn && isMicOn) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, [isCameraOn]);
-  
 
   const convertToWav = async (audioBlob: Blob): Promise<Blob> => {
-    try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioContext = new AudioContext();
-  
-      // Decode audio data
-      const decodedData = await audioContext.decodeAudioData(arrayBuffer);
-  
-      // Prepare WAV encoding
-      const wavData = {
-        sampleRate: decodedData.sampleRate,
-        channelData: Array.from(
-          { length: decodedData.numberOfChannels },
-          (_, i) => decodedData.getChannelData(i)
-        ),
-      };
-  
-      // Encode WAV
-      const wavArrayBuffer = await WavEncoder.encode(wavData);
-      return new Blob([wavArrayBuffer], { type: 'audio/wav' });
-    } catch (error) {
-      console.error('Error converting audioBlob to WAV:', error);
-      throw error; // Optionally rethrow the error if needed
-    }
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioContext = new AudioContext();
+
+    // Decode audio data
+    const decodedData = await audioContext.decodeAudioData(arrayBuffer);
+
+    // Prepare WAV encoding
+    const wavData = {
+      sampleRate: decodedData.sampleRate,
+      channelData: Array.from(
+        { length: decodedData.numberOfChannels },
+        (_, i) => decodedData.getChannelData(i)
+      ),
+    };
+
+    // Encode WAV
+    const wavArrayBuffer = await WavEncoder.encode(wavData);
+    return new Blob([wavArrayBuffer], { type: 'audio/wav' });
   };
-  
 
   const monitorAudioLevels = (dataArray: Uint8Array, stream: MediaStream) => {
     const detectSpeech = () => {
-      try {
-        analyserRef.current?.getByteTimeDomainData(dataArray);
-  
-        // Calculate RMS value (volume level)
-        const rms = Math.sqrt(
-          dataArray.reduce((sum, value) => sum + Math.pow(value - 128, 2), 0) /
-            dataArray.length
-        );
-  
-        const threshold = 20; // Audio sensitivity threshold
-        if (rms > threshold) {
+      analyserRef.current?.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS value (volume level)
+      const rms = Math.sqrt(
+        dataArray.reduce((sum, value) => sum + Math.pow(value - 128, 2), 0) /
+          dataArray.length
+      );
+
+      const threshold = 20; // Audio sensitivity threshold
+      if (rms > threshold) {
           // startRecording();
-          startSpeechRecognition();
-  
-          if (silenceTimeoutRef.current) {
-            clearTimeout(silenceTimeoutRef.current);
-          }
-          // silenceTimeoutRef.current = window.setTimeout(stopRecording, 2000); // Stop after 2 seconds of silence
-          silenceTimeoutRef.current = window.setTimeout(stopSpeechRecognition, 2000); // Stop after 2 seconds of silence
+          startSpeechRecognition()
+
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
         }
-  
-        requestAnimationFrame(detectSpeech);
-      } catch (error) {
-        console.error('Error in detectSpeech function:', error);
+        // silenceTimeoutRef.current = window.setTimeout(stopRecording, 2000); // Stop after 2 seconds of silence
+        silenceTimeoutRef.current = window.setTimeout(stopSpeechRecognition, 2000); // Stop after 2 seconds of silence
       }
+
+      requestAnimationFrame(detectSpeech);
     };
-  
+
     detectSpeech();
   };
-  
 
   const startSpeechRecognition = () => {
     if (recognition && !isSpeechRecognitionActive) {
@@ -499,7 +437,6 @@ function ScenarioForm() {
     }
   };
 
- 
 
   const startRecording = async () => {
     const wavRecorder = wavRecorderRef.current;
@@ -519,19 +456,15 @@ function ScenarioForm() {
     }
   
     // Start MediaRecorder if it's inactive
-    try {
-      if (mediaRecorder) {
-        if (mediaRecorder.state === 'inactive') {
-          mediaRecorder.start();
-          console.log('MediaRecorder started.');
-        } else if (mediaRecorder.state === 'recording') {
-          console.warn('MediaRecorder is already recording.');
-        }
-      } else {
-        console.warn('MediaRecorder is not available.');
+    if (mediaRecorder) {
+      if (mediaRecorder.state === 'inactive') {
+        mediaRecorder.start();
+        console.log('MediaRecorder started.');
+      } else if (mediaRecorder.state === 'recording') {
+        console.warn('MediaRecorder is already recording.');
       }
-    } catch (error) {
-      console.error('Error starting MediaRecorder:', error);
+    } else {
+      console.warn('MediaRecorder is not available.');
     }
   
     setIsRecording(true);
@@ -542,13 +475,8 @@ function ScenarioForm() {
         if (wavRecorder.getStatus() === 'paused') {
           await wavRecorder.record((data) => client.appendInputAudio(data.mono));
         } else {
-          if(wavRecorder.getStatus() === 'recording'){
-            console.log('wavRecorder is already recording.');            
-          }else{
-            await wavRecorder.begin();
-          }
+          await wavRecorder.begin();
           await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-          // await wavRecorder.pause();
         }
         console.log('wavRecorder started recording.');
       } else {
@@ -558,7 +486,6 @@ function ScenarioForm() {
       console.error('Error during wavRecorder setup:', error);
     }
   };
-  
   
 
   const stopSpeechRecognition = () => {
@@ -583,7 +510,7 @@ function ScenarioForm() {
   
     try {
       // Pause wavRecorder
-      if (wavRecorder.getStatus() === 'recording') {
+      if (wavRecorder) {
         await wavRecorder.pause();
       } else {
         console.warn('wavRecorder is not available.');
@@ -715,43 +642,17 @@ function ScenarioForm() {
 
  
 
-  const toggleMicrophone = useCallback(async() => {
-    try {
-      // if(isMicOn && wavRecorderRef.current.getStatus() === 'recording'){
-      //   wavRecorderRef.current.end();
-      // }
-      // if(isMicOn && mediaRecorderRef.current?.state === 'recording'){
-      //   mediaRecorderRef.current.stop();
-      // }
-      // if(isMicOn && recognition && isSpeechRecognitionActive){
-      //   recognition.stop();
-      // }
-      // if(isMicOn && streamRef.current && videoChunksRef.current){
-      //   streamRef.current.getAudioTracks().forEach((track) => {
-      //     track.stop();
-      //   });
-      //   videoChunksRef.current = []
-      // }
-
-        
-     
-      console.log('@@@ MIC: ', streamRef.current);
-      if (streamRef.current) {
-        const audioTrack = streamRef.current.getAudioTracks()[0];
-        if (audioTrack) {
-          audioTrack.enabled = !audioTrack.enabled;
-          setIsMicOn(audioTrack.enabled);
-        } else {
-          console.warn('No audio track found in the stream.');
-        }
-      } else {
-        console.warn('Stream not available.');
+  const toggleMicrophone = () => {
+    console.log('@@@ MIC: ', streamRef.current);
+    if (streamRef.current) {
+      const audioTrack = streamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicOn(audioTrack.enabled);
       }
-    } catch (error) {
-      console.error('Error toggling microphone:', error);
     }
-  },[isMicOn]);
-  
+  };
+
 
 
   useEffect(() => {
@@ -957,7 +858,7 @@ function ScenarioForm() {
 
     try {
       const response = await fetch(
-        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${processedTranscript}`,
+        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${text}`,
         requestOptions
       );
       const result = await response.json();
@@ -1031,7 +932,7 @@ function ScenarioForm() {
       fetch('https://socialiq.zapto.org/generate_dialog_video', requestOptions)
         .then((response) => response.json())
         .then((result) => {
-          setProcessedTranscript([]);
+          setText('');
           setEmotion(result);
           return result;
         })
@@ -1040,8 +941,8 @@ function ScenarioForm() {
   };
 
   useEffect(() => {
-    if (isRecordingStop && processedTranscript && isMicOn) {
-      if (wavBlobUrl ?? videoBlob ) {
+    if (isRecordingStop && text) {
+      if (wavBlobUrl ?? videoBlob) {
         // get TIP   GET API
         fetchGetTips();
         // send audio or video to gpt post api
@@ -1050,7 +951,7 @@ function ScenarioForm() {
         fetchStoreDetails();
       }
     }
-  }, [isRecordingStop, wavBlobUrl,isMicOn, videoBlob, processedTranscript, isCameraOn]);
+  }, [isRecordingStop, wavBlobUrl, videoBlob, text, isCameraOn]);
 
   return (
     <>
