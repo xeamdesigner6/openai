@@ -234,8 +234,8 @@ function ScenarioForm() {
   // Call the function when the component loads
   useEffect(() => {
     try {
-      connectConversation();
       if (isMicOn && isCameraOn) {
+        connectConversation();
       }
     } catch (error) {
       console.error('Error connecting to conversation:', error);
