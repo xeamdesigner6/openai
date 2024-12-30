@@ -311,6 +311,13 @@ function ScenarioForm() {
               setWavUrl(wavBlobUrl);
               setWavBlobUrl(wavBlob);
 
+             // Trigger download for WAV audio
+            // const audioAnchor = document.createElement('a');
+            // audioAnchor.href = wavBlobUrl;
+            // audioAnchor.target = '_blank';
+            // audioAnchor.download = 'audio_output.wav';
+            // audioAnchor.click();
+
               // Cleanup the object URL after the download
               URL.revokeObjectURL(wavBlobUrl);
             } catch (error) {
@@ -322,6 +329,15 @@ function ScenarioForm() {
             const videoBlobUrl = URL.createObjectURL(mediaBlob);
             setVideoBlobUrl(videoBlobUrl);
             setVideoBlob(mediaBlob);
+
+              // Trigger download for video
+              // const videoAnchor = document.createElement('a');
+              // videoAnchor.href = videoBlobUrl;
+              // videoAnchor.target = '_blank';
+              // videoAnchor.download = 'video_output.webm'; // Assuming the video is in webm format
+              // videoAnchor.click();
+
+
 
             // Cleanup the video Blob URL
             URL.revokeObjectURL(videoBlobUrl);
@@ -353,7 +369,7 @@ function ScenarioForm() {
   useEffect(() => {
     try {
       // Start audio/video processing
-      if (isMicOn && isCameraOn) {
+      if (isMicOn || isCameraOn) {
         startAudioVideoProcessing();
       }
     } catch (error) {
@@ -729,7 +745,7 @@ function ScenarioForm() {
 
     try {
       const response = await fetch(
-        'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&user_name=testuser&bot_name=Kevin&delete=true',
+        'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=673dc3fcaa00db4490c2f292&user_name=testuser&bot_name=Kevin&delete=true',
         requestOptions
       );
       const result = await response.json();
@@ -751,7 +767,7 @@ function ScenarioForm() {
   const DeleteChatStatus = () => {
     const formdata = new FormData();
     formdata.append('email', 'developer.wellorgs@gmail.com');
-    formdata.append('scenario_id', '67287c99933445b37471fe71');
+    formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -780,7 +796,7 @@ function ScenarioForm() {
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     const formdata = new FormData();
     formdata.append('email', 'developer.wellorgs@gmail.com');
-    formdata.append('scenario_id', '67287c99933445b37471fe71');
+    formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
     formdata.append('time', formattedTime);
 
     const requestOptions: RequestInit = {
@@ -797,7 +813,7 @@ function ScenarioForm() {
         if (result) {
           const formdata = new FormData();
           formdata.append('email', 'developer.wellorgs@gmail.com');
-          formdata.append('scenario_id', '67287c99933445b37471fe71');
+          formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
           formdata.append('Title', 'Code Review Clash');
           formdata.append('Category', 'Conflict Resolution');
           formdata.append('Difficulty', 'Intermediate');
@@ -839,7 +855,7 @@ function ScenarioForm() {
 
     try {
       const response = await fetch(
-        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${processedTranscript}`,
+        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=673dc3fcaa00db4490c2f292&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${processedTranscript}`,
         requestOptions
       );
       const result = await response.json();
@@ -863,7 +879,7 @@ function ScenarioForm() {
       Description:
         'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.',
       Mood: 'Supportive',
-      scenario_id: '67287c99933445b37471fe71',
+      scenario_id: '673dc3fcaa00db4490c2f292',
       bot_name: 'hello',
       user_name: 'abc',
       start_message: 'Hello testuser',
@@ -889,7 +905,7 @@ function ScenarioForm() {
     if (wavBlobUrl !== null || videoBlob !== null) {
       const formdata = new FormData();
       formdata.append('email', 'developer.wellorgs@gmail.com');
-      formdata.append('scenario_id', '67287c99933445b37471fe71');
+      formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
       formdata.append('Title', 'Code Review Clash');
       formdata.append('Category', 'Conflict Resolution');
       formdata.append('Difficulty', 'Intermediate');
