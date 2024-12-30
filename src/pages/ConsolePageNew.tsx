@@ -26,6 +26,7 @@ import { Map } from '../components/Map';
 
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
+import imagess from '../assests/imgds.jpg';
 
 /**
  * Type for result from get_weather() function call
@@ -54,7 +55,7 @@ interface RealtimeEvent {
   event: { [key: string]: any };
 }
 
-export function ConsolePage() {
+export function ConsolePageNew() {
   /**
    * Ask user for API Key
    * If we're using the local relay server, we don't need this
@@ -125,27 +126,9 @@ export function ConsolePage() {
   });
   const [marker, setMarker] = useState<Coordinates | null>(null);
 
-  /**
-   * Utility for formatting the timing of logs
-   */
-  const formatTime = useCallback((timestamp: string) => {
-    const startTime = startTimeRef.current;
-    const t0 = new Date(startTime).valueOf();
-    const t1 = new Date(timestamp).valueOf();
-    const delta = t1 - t0;
-    const hs = Math.floor(delta / 10) % 100;
-    const s = Math.floor(delta / 1000) % 60;
-    const m = Math.floor(delta / 60_000) % 60;
-    const pad = (n: number) => {
-      let s = n + '';
-      while (s.length < 2) {
-        s = '0' + s;
-      }
-      return s;
-    };
-    return `${pad(m)}:${pad(s)}.${pad(hs)}`;
-  }, []);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
+ 
   /**
    * When you click the API key
    */
@@ -336,75 +319,7 @@ export function ConsolePage() {
     }
   }, [items]);
 
-  /**
-   * Set up render loops for the visualization canvas
-   */
-  useEffect(() => {
-    let isLoaded = true;
-
-    const wavRecorder = wavRecorderRef.current;
-    const clientCanvas = clientCanvasRef.current;
-    let clientCtx: CanvasRenderingContext2D | null = null;
-
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    const serverCanvas = serverCanvasRef.current;
-    let serverCtx: CanvasRenderingContext2D | null = null;
-
-    const render = () => {
-      if (isLoaded) {
-        if (clientCanvas) {
-          if (!clientCanvas.width || !clientCanvas.height) {
-            clientCanvas.width = clientCanvas.offsetWidth;
-            clientCanvas.height = clientCanvas.offsetHeight;
-          }
-          clientCtx = clientCtx || clientCanvas.getContext('2d');
-          if (clientCtx) {
-            clientCtx.clearRect(0, 0, clientCanvas.width, clientCanvas.height);
-            const result = wavRecorder.recording
-              ? wavRecorder.getFrequencies('voice')
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              clientCanvas,
-              clientCtx,
-              result.values,
-              '#0099ff',
-              10,
-              0,
-              8
-            );
-          }
-        }
-        if (serverCanvas) {
-          if (!serverCanvas.width || !serverCanvas.height) {
-            serverCanvas.width = serverCanvas.offsetWidth;
-            serverCanvas.height = serverCanvas.offsetHeight;
-          }
-          serverCtx = serverCtx || serverCanvas.getContext('2d');
-          if (serverCtx) {
-            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
-            const result = wavStreamPlayer.analyser
-              ? wavStreamPlayer.getFrequencies('voice')
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              serverCanvas,
-              serverCtx,
-              result.values,
-              '#009900',
-              10,
-              0,
-              8
-            );
-          }
-        }
-        window.requestAnimationFrame(render);
-      }
-    };
-    render();
-
-    return () => {
-      isLoaded = false;
-    };
-  }, []);
+ 
 
   /**
    * Core RealtimeClient and audio capture setup
@@ -420,79 +335,7 @@ export function ConsolePage() {
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
-    // Add tools
-    client.addTool(
-      {
-        name: 'set_memory',
-        description: 'Saves important data about the user into memory.',
-        parameters: {
-          type: 'object',
-          properties: {
-            key: {
-              type: 'string',
-              description:
-                'The key of the memory value. Always use lowercase and underscores, no other characters.',
-            },
-            value: {
-              type: 'string',
-              description: 'Value can be anything represented as a string',
-            },
-          },
-          required: ['key', 'value'],
-        },
-      },
-      async ({ key, value }: { [key: string]: any }) => {
-        setMemoryKv((memoryKv) => {
-          const newKv = { ...memoryKv };
-          newKv[key] = value;
-          return newKv;
-        });
-        return { ok: true };
-      }
-    );
-    client.addTool(
-      {
-        name: 'get_weather',
-        description:
-          'Retrieves the weather for a given lat, lng coordinate pair. Specify a label for the location.',
-        parameters: {
-          type: 'object',
-          properties: {
-            lat: {
-              type: 'number',
-              description: 'Latitude',
-            },
-            lng: {
-              type: 'number',
-              description: 'Longitude',
-            },
-            location: {
-              type: 'string',
-              description: 'Name of the location',
-            },
-          },
-          required: ['lat', 'lng', 'location'],
-        },
-      },
-      async ({ lat, lng, location }: { [key: string]: any }) => {
-        setMarker({ lat, lng, location });
-        setCoords({ lat, lng, location });
-        const result = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`
-        );
-        const json = await result.json();
-        const temperature = {
-          value: json.current.temperature_2m as number,
-          units: json.current_units.temperature_2m as string,
-        };
-        const wind_speed = {
-          value: json.current.wind_speed_10m as number,
-          units: json.current_units.wind_speed_10m as string,
-        };
-        setMarker({ lat, lng, location, temperature, wind_speed });
-        return json;
-      }
-    );
+ 
 
     // handle realtime events from client + server for event logging
     client.on('realtime.event', (realtimeEvent: RealtimeEvent) => {
@@ -517,11 +360,7 @@ export function ConsolePage() {
     });
     client.on('conversation.updated', async ({ item, delta }: any) => {
       const items = client.conversation.getItems();
-      console.log(items,'items');
-      
       if (delta?.audio) {
-        console.log(delta?.audio,'delta?.audio');
-
         wavStreamPlayer.add16BitPCM(delta.audio, item.id);
       }
       if (item.status === 'completed' && item.formatted.audio?.length) {
@@ -532,22 +371,27 @@ export function ConsolePage() {
         );
         item.formatted.file = wavFile;
       }
-      console.log(items,'setItemso');
-
       setItems(items);
     });
 
-    
     setItems(client.conversation.getItems());
-
-
-    
 
     return () => {
       // cleanup; resets to defaults
       client.reset();
     };
   }, []);
+
+
+//   useEffect(() => {
+//     // Simulate connecting on page load
+//     const connectOnLoad = async () => {
+//       await connectConversation(); // Simulate connecting if necessary
+//       setIsConnected(true);
+//     };
+
+//     connectOnLoad();
+//   }, []);
 
   /**
    * Render the application
@@ -574,79 +418,77 @@ export function ConsolePage() {
       <div className="content-main">
         <div className="content-logs">
           <div className="content-block events">
-            <div className="visualization">
-              <div className="visualization-entry client">
-                <canvas ref={clientCanvasRef} />
-              </div>
-              <div className="visualization-entry server">
-                <canvas ref={serverCanvasRef} />
-              </div>
-            </div>
-            <div className="content-block-title">events</div>
-            <div className="content-block-body" ref={eventsScrollRef}>
-              {!realtimeEvents.length && `awaiting connection...`}
-              {realtimeEvents.map((realtimeEvent, i) => {
-                const count = realtimeEvent.count;
-                const event = { ...realtimeEvent.event };
-                if (event.type === 'input_audio_buffer.append') {
-                  event.audio = `[trimmed: ${event.audio.length} bytes]`;
-                } else if (event.type === 'response.audio.delta') {
-                  event.delta = `[trimmed: ${event.delta.length} bytes]`;
-                }
-                return (
-                  <div className="event" key={event.event_id}>
-                    <div className="event-timestamp">
-                      {formatTime(realtimeEvent.time)}
-                    </div>
-                    <div className="event-details">
-                      <div
-                        className="event-summary"
-                        onClick={() => {
-                          // toggle event details
-                          const id = event.event_id;
-                          const expanded = { ...expandedEvents };
-                          if (expanded[id]) {
-                            delete expanded[id];
-                          } else {
-                            expanded[id] = true;
-                          }
-                          setExpandedEvents(expanded);
-                        }}
+          <div className="grid sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="sm:col-span-6  lg:col-span-7 xl:col-span-7  ">
+            <div className="flex gap-5">
+              <img
+                src={imagess}
+                className="rounded-2xl w-1/2 h-80 object-cover "
+                style={{ borderWidth: 0, borderColor: 'blue' }}
+              />
+              <div>
+                {/* Webcam feed display */}
+                <div style={{ position: 'relative' }} className="w-full h-full">
+                  {/* <h2>Webcam Feed</h2> */}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    width="300"
+                    height="400"
+                    className="border w-full h-full shadow-md object-cover"
+                    style={{ borderRadius: '16px' }}
+                  ></video>
+
+                  {/* Mic and Camera control buttons */}
+                  <div className="flex justify-center items-center gap-5 absolute bottom-0 inset-x-0">
+                    <div>
+                      {/* <button
+                        onClick={toggleMicrophone}
+                        style={{ background: 'transparent', border: 'none' }}
                       >
-                        <div
-                          className={`event-source ${
-                            event.type === 'error'
-                              ? 'error'
-                              : realtimeEvent.source
-                          }`}
-                        >
-                          {realtimeEvent.source === 'client' ? (
-                            <ArrowUp />
-                          ) : (
-                            <ArrowDown />
-                          )}
-                          <span>
-                            {event.type === 'error'
-                              ? 'error!'
-                              : realtimeEvent.source}
-                          </span>
-                        </div>
-                        <div className="event-type">
-                          {event.type}
-                          {count && ` (${count})`}
-                        </div>
-                      </div>
-                      {!!expandedEvents[event.event_id] && (
-                        <div className="event-payload">
-                          {JSON.stringify(event, null, 2)}
-                        </div>
-                      )}
+                        {isMicOn ? (
+                          <FaMicrophone size={20} color="white" />
+                        ) : (
+                          <FaMicrophoneSlash size={20} color="white" />
+                        )}
+                      </button> */}
+                      <button>asd</button>
+                    </div>
+                    <div>
+                      {/* <button
+                        onClick={() => setIsCameraOn(!isCameraOn)}
+                        style={{ background: 'transparent', border: 'none' }}
+                      >
+                        {isCameraOn ? (
+                          <FaVideo size={20} color="white" />
+                        ) : (
+                          <FaVideoSlash size={20} color="white" />
+                        )}
+                      </button> */}
+                      <button>asd</button>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              </div>
             </div>
+
+            <div className="flex lg:justify-end  mt-5">
+              <div className=" bg-[#e3f2fd] lg:w-[360px]  rounded-2xl p-5">
+                <span>sddsdfs</span>
+                <span className="block">
+             emoji
+                </span>
+                <div className="bg-yellow-500 text-white px-2 py-2">
+                audio_emotion
+             
+                </div>
+              </div>
+            </div>
+       
           </div>
+
+          <div className="max-w-2xl flex justify-center sm:col-span-6 lg:col-span-5 xl:col-span-5">
           <div className="content-block conversation">
             <div className="content-block-title">conversation</div>
             <div className="content-block-body" data-conversation-content>
@@ -711,6 +553,74 @@ export function ConsolePage() {
               })}
             </div>
           </div>
+            </div>
+          </div>
+          </div>
+
+          {/* <div className="content-block conversation">
+            <div className="content-block-title">conversation</div>
+            <div className="content-block-body" data-conversation-content>
+              {!items.length && `awaiting connection...`}
+              {items.map((conversationItem, i) => {
+                return (
+                  <div className="conversation-item" key={conversationItem.id}>
+                    <div className={`speaker ${conversationItem.role || ''}`}>
+                      <div>
+                        {(
+                          conversationItem.role || conversationItem.type
+                        ).replaceAll('_', ' ')}
+                      </div>
+                      <div
+                        className="close"
+                        onClick={() =>
+                          deleteConversationItem(conversationItem.id)
+                        }
+                      >
+                        <X />
+                      </div>
+                    </div>
+                    <div className={`speaker-content`}>
+                      tool response
+                      {conversationItem.type === 'function_call_output' && (
+                        <div>{conversationItem.formatted.output}</div>
+                      )}
+                      tool call
+                      {!!conversationItem.formatted.tool && (
+                        <div>
+                          {conversationItem.formatted.tool.name}(
+                          {conversationItem.formatted.tool.arguments})
+                        </div>
+                      )}
+                      {!conversationItem.formatted.tool &&
+                        conversationItem.role === 'user' && (
+                          <div>
+                            {conversationItem.formatted.transcript ||
+                              (conversationItem.formatted.audio?.length
+                                ? '(awaiting transcript)'
+                                : conversationItem.formatted.text ||
+                                  '(item sent)')}
+                          </div>
+                        )}
+                      {!conversationItem.formatted.tool &&
+                        conversationItem.role === 'assistant' && (
+                          <div>
+                            {conversationItem.formatted.transcript ||
+                              conversationItem.formatted.text ||
+                              '(truncated)'}
+                          </div>
+                        )}
+                      {conversationItem.formatted.file && (
+                        <audio
+                          src={conversationItem.formatted.file.url}
+                          controls
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div> */}
           <div className="content-actions">
             <Toggle
               defaultValue={false}
@@ -738,40 +648,6 @@ export function ConsolePage() {
                 isConnected ? disconnectConversation : connectConversation
               }
             />
-          </div>
-        </div>
-        <div className="content-right">
-          <div className="content-block map">
-            <div className="content-block-title">get_weather()</div>
-            <div className="content-block-title bottom">
-              {marker?.location || 'not yet retrieved'}
-              {!!marker?.temperature && (
-                <>
-                  <br />
-                  🌡️ {marker.temperature.value} {marker.temperature.units}
-                </>
-              )}
-              {!!marker?.wind_speed && (
-                <>
-                  {' '}
-                  🍃 {marker.wind_speed.value} {marker.wind_speed.units}
-                </>
-              )}
-            </div>
-            <div className="content-block-body full">
-              {coords && (
-                <Map
-                  center={[coords.lat, coords.lng]}
-                  location={coords.location}
-                />
-              )}
-            </div>
-          </div>
-          <div className="content-block kv">
-            <div className="content-block-title">set_memory()</div>
-            <div className="content-block-body content-kv">
-              {JSON.stringify(memoryKv, null, 2)}
-            </div>
           </div>
         </div>
       </div>

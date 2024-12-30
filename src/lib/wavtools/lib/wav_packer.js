@@ -98,6 +98,9 @@ export class WavPacker {
       ), // Chunk length
       data,
     ];
+
+    
+
     const blob = new Blob(output, { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
     return {

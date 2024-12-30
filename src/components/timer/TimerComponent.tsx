@@ -1,41 +1,54 @@
+import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 
-const TimerComponent = () => {
-    const [seconds, setSeconds] = useState(0);
-    const [minutes, setMinutes] = useState(0);
-    const [hours, setHours] = useState(0);
+interface TimeData {
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
 
-    useEffect(() => {
-        // Start an interval when the component mounts
-        const interval = setInterval(() => {
-            setSeconds((prevSeconds) => {
-                if (prevSeconds === 59) {
-                    setMinutes((prevMinutes) => {
-                        if (prevMinutes === 59) {
-                            setHours((prevHours) => prevHours + 1); // Increment hours when minutes reach 60
-                        }
-                        return (prevMinutes + 1) % 60; // Reset minutes after 60
-                    });
-                    return 0; // Reset seconds after 60
-                }
-                return prevSeconds + 1; // Increment seconds
-            });
-        }, 1000); // 1000 ms interval = 1 second
+interface TimerComponentProps {
+  onTimeUpdate?: (timeData: TimeData) => void;
+  botAndChat?: any;
+}
 
-        // Cleanup interval when the component unmounts
-        return () => clearInterval(interval);
-    }, []);
+const TimerComponent: React.FC<TimerComponentProps> = ({
+  onTimeUpdate,
+  botAndChat,
+}) => {
+  const [timerValue, setTimerValue] = useState<string | null>('');
 
-    return (
-        <div>
+  useEffect(() => {
+    let interval: NodeJS.Timer;
+    const startTime = moment(botAndChat || '00:00:00', 'HH:mm:ss');
 
-            <p className='font-bold'>
-                Timer: {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:
-                {seconds.toString().padStart(2, '0')}
-            </p>
+    interval = setInterval(() => {
+      startTime.add(1, 'seconds');
+      const formattedTime = startTime.format('HH:mm:ss');
+      setTimerValue(formattedTime);
 
-        </div>
-    );
+      const timeParts = formattedTime.split(':').map(Number);
+      const timeData: TimeData = {
+        hours: timeParts[0],
+        minutes: timeParts[1],
+        seconds: timeParts[2],
+      };
+
+      if (onTimeUpdate) {
+        onTimeUpdate(timeData);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [onTimeUpdate, botAndChat]);
+
+  return (
+    <div>
+      <p className="font-bold">Timer: {timerValue}</p>
+    </div>
+  );
 };
 
 export default TimerComponent;
