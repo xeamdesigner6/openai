@@ -311,12 +311,12 @@ function ScenarioForm() {
               setWavUrl(wavBlobUrl);
               setWavBlobUrl(wavBlob);
 
-             // Trigger download for WAV audio
-            // const audioAnchor = document.createElement('a');
-            // audioAnchor.href = wavBlobUrl;
-            // audioAnchor.target = '_blank';
-            // audioAnchor.download = 'audio_output.wav';
-            // audioAnchor.click();
+              // Trigger download for WAV audio
+              // const audioAnchor = document.createElement('a');
+              // audioAnchor.href = wavBlobUrl;
+              // audioAnchor.target = '_blank';
+              // audioAnchor.download = 'audio_output.wav';
+              // audioAnchor.click();
 
               // Cleanup the object URL after the download
               URL.revokeObjectURL(wavBlobUrl);
@@ -330,14 +330,12 @@ function ScenarioForm() {
             setVideoBlobUrl(videoBlobUrl);
             setVideoBlob(mediaBlob);
 
-              // Trigger download for video
-              // const videoAnchor = document.createElement('a');
-              // videoAnchor.href = videoBlobUrl;
-              // videoAnchor.target = '_blank';
-              // videoAnchor.download = 'video_output.webm'; // Assuming the video is in webm format
-              // videoAnchor.click();
-
-
+            // Trigger download for video
+            // const videoAnchor = document.createElement('a');
+            // videoAnchor.href = videoBlobUrl;
+            // videoAnchor.target = '_blank';
+            // videoAnchor.download = 'video_output.webm'; // Assuming the video is in webm format
+            // videoAnchor.click();
 
             // Cleanup the video Blob URL
             URL.revokeObjectURL(videoBlobUrl);
@@ -1138,33 +1136,19 @@ function ScenarioForm() {
                 )}
               </div>
 
-              {/* {transcript} */}
-              {/* {processedTranscript.map((trans, i) => {
-                return (
-                  <div className="" key={i}>
-                    <div className={``}>
-                    <div className="flex mb-4 justify-end gap-1 ">
-                        <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">{trans?.title}</div>
-                      </div>
-                      </div>
-                      </div>
-                )
-              })} */}
-
               {items.map((conversationItem, i) => {
                 return (
                   <div className="" key={conversationItem.id}>
                     <div className={``}>
-                      <div className="flex mb-4 justify-end gap-1 ">
-                        <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
-                          {!conversationItem.formatted.tool &&
-                            conversationItem.role === 'user' && (
-                              <div>
-                                {conversationItem.formatted.transcript ?? '--'}
-                              </div>
-                            )}
-                        </div>
-                      </div>
+                      {!conversationItem.formatted.tool &&
+                        conversationItem.role === 'user' && (
+                          <div className="flex mb-4 justify-end gap-1 ">
+                            <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
+                              {conversationItem.formatted.transcript ?? '--'}
+                            </div>
+                          </div>
+                        )}
+
                       {!conversationItem.formatted.tool &&
                         conversationItem.role === 'assistant' && (
                           <div className="flex mb-4 justify-start gap-1">
