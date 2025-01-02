@@ -19,6 +19,8 @@ import { instructions } from '../utils/conversation_config.js';
 
 const LOCAL_RELAY_SERVER_URL: string =
   process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
+  // console.log(process.env,"process.env")
+
 
 declare global {
   interface Window {
@@ -111,16 +113,21 @@ function ScenarioForm() {
     new WavStreamPlayer({ sampleRate: 24000 })
   );
 
+
+
+
   const clientRef = useRef<RealtimeClient>(
     new RealtimeClient(
       LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
         : {
-            apiKey: process.env.OPENAI_API_KEY,
-            dangerouslyAllowAPIKeyInBrowser: true,
+          apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+          dangerouslyAllowAPIKeyInBrowser: true,
           }
     )
   );
+
+
 
   /**
    * Connect to conversation:
@@ -311,7 +318,7 @@ function ScenarioForm() {
               setWavUrl(wavBlobUrl);
               setWavBlobUrl(wavBlob);
 
-             // Trigger download for WAV audio
+            // Trigger download for WAV audio
             // const audioAnchor = document.createElement('a');
             // audioAnchor.href = wavBlobUrl;
             // audioAnchor.target = '_blank';
@@ -336,8 +343,6 @@ function ScenarioForm() {
               // videoAnchor.target = '_blank';
               // videoAnchor.download = 'video_output.webm'; // Assuming the video is in webm format
               // videoAnchor.click();
-
-
 
             // Cleanup the video Blob URL
             URL.revokeObjectURL(videoBlobUrl);
@@ -745,7 +750,7 @@ function ScenarioForm() {
 
     try {
       const response = await fetch(
-        'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=673dc3fcaa00db4490c2f292&user_name=testuser&bot_name=Kevin&delete=true',
+        'https://socialiq.zapto.org/show_chat?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&user_name=testuser&bot_name=Kevin&delete=true',
         requestOptions
       );
       const result = await response.json();
@@ -767,7 +772,7 @@ function ScenarioForm() {
   const DeleteChatStatus = () => {
     const formdata = new FormData();
     formdata.append('email', 'developer.wellorgs@gmail.com');
-    formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
+    formdata.append('scenario_id', '67287c99933445b37471fe71');
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -796,7 +801,7 @@ function ScenarioForm() {
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     const formdata = new FormData();
     formdata.append('email', 'developer.wellorgs@gmail.com');
-    formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
+    formdata.append('scenario_id', '67287c99933445b37471fe71');
     formdata.append('time', formattedTime);
 
     const requestOptions: RequestInit = {
@@ -813,7 +818,7 @@ function ScenarioForm() {
         if (result) {
           const formdata = new FormData();
           formdata.append('email', 'developer.wellorgs@gmail.com');
-          formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
+          formdata.append('scenario_id', '67287c99933445b37471fe71');
           formdata.append('Title', 'Code Review Clash');
           formdata.append('Category', 'Conflict Resolution');
           formdata.append('Difficulty', 'Intermediate');
@@ -855,7 +860,7 @@ function ScenarioForm() {
 
     try {
       const response = await fetch(
-        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=673dc3fcaa00db4490c2f292&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${processedTranscript}`,
+        `https://socialiq.zapto.org/get_tips?email=developer.wellorgs@gmail.com&scenario_id=67287c99933445b37471fe71&Title=Code Review Clash&Category=Conflict Resolution&Difficulty=Intermediate&Description=A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.&Mood= Supportive&user_name= Jamie&last_message=${processedTranscript}`,
         requestOptions
       );
       const result = await response.json();
@@ -879,11 +884,11 @@ function ScenarioForm() {
       Description:
         'A tense conversation between a junior developer, User, and a senior developer, Jamie, over feedback on a code review.',
       Mood: 'Supportive',
-      scenario_id: '673dc3fcaa00db4490c2f292',
+      scenario_id: '67287c99933445b37471fe71',
       bot_name: 'hello',
-      user_name: 'abc',
+      user_name: 'testuser',
       start_message: 'Hello testuser',
-      last_message: 'Let’s make this',
+      last_message: '123',
     });
 
     const requestOptions: RequestInit = {
@@ -905,7 +910,7 @@ function ScenarioForm() {
     if (wavBlobUrl !== null || videoBlob !== null) {
       const formdata = new FormData();
       formdata.append('email', 'developer.wellorgs@gmail.com');
-      formdata.append('scenario_id', '673dc3fcaa00db4490c2f292');
+      formdata.append('scenario_id', '67287c99933445b37471fe71');
       formdata.append('Title', 'Code Review Clash');
       formdata.append('Category', 'Conflict Resolution');
       formdata.append('Difficulty', 'Intermediate');
@@ -1102,6 +1107,7 @@ function ScenarioForm() {
                 ) : chats.length > 0 ? (
                   chats.map((message, index) => {
                     const isTestUserMessage = message.startsWith('testuser:');
+                    console.log(message,"message")
                     return (
                       <div
                         key={index}
@@ -1155,16 +1161,17 @@ function ScenarioForm() {
                 return (
                   <div className="" key={conversationItem.id}>
                     <div className={``}>
-                      <div className="flex mb-4 justify-end gap-1 ">
-                        <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
                           {!conversationItem.formatted.tool &&
                             conversationItem.role === 'user' && (
-                              <div>
-                                {conversationItem.formatted.transcript ?? '--'}
-                              </div>
-                            )}
+                              <div className="flex mb-4 justify-end gap-1 ">
+                        <div className="w-1/2 bg-[#eee] border border-1 border-zinc-300 border-opacity-30 rounded-md flex items-start px-2 py-2 text-black relative">
+                                {conversationItem.formatted.transcript }
+                                {/* {conversationItem.formatted.transcript ||
+                                conversationItem.formatted.text ||
+                                '(truncated)'} */}
+                                </div>
                         </div>
-                      </div>
+                            )}
                       {!conversationItem.formatted.tool &&
                         conversationItem.role === 'assistant' && (
                           <div className="flex mb-4 justify-start gap-1">
